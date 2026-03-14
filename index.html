@@ -85,7 +85,7 @@
             moveData.z = -Math.sin(data.angle.radian); 
             
             // Cập nhật lại góc xoay để mặt nhìn đúng hướng sau khi đảo trục
-            moveData.angle = data.angle.degree - 90; 
+            moveData.angle = data.angle.degree + 90; 
             
             showModel('walk');
         });
