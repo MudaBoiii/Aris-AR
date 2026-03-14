@@ -2,7 +2,7 @@
 <html>
 <head>
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Aris AR - No A-Pose Final</title>
+    <title>Aris AR - Final Opacity Fix</title>
     <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
     <script src="https://cdn.jsdelivr.net/gh/donmccurdy/aframe-extras@v7.0.0/dist/aframe-extras.min.js"></script>
@@ -11,18 +11,21 @@
     <style>
         body { margin: 0; overflow: hidden; touch-action: none; background: #000; }
         #joystick-zone { position: fixed; bottom: 30px; left: 30px; width: 150px; height: 150px; z-index: 3000; }
+        
         #attack-btn {
             position: fixed; bottom: 60px; right: 60px; width: 85px; height: 85px;
             background: rgba(255, 255, 255, 0.15); border: 5px solid #fff; border-radius: 50%;
             color: white; font-size: 35px; font-weight: bold; z-index: 3000;
             display: flex; align-items: center; justify-content: center;
             user-select: none; -webkit-tap-highlight-color: transparent;
-            transition: all 0.1s;
+            transition: all 0.1s ease-out;
         }
+
+        /* Hiệu ứng đèn xanh dương #4ea0ee khi nhấn giữ */
         #attack-btn.active-atk {
             background: rgba(78, 160, 238, 0.7) !important;
             border-color: #4ea0ee !important;
-            box-shadow: 0 0 20px #4ea0ee;
+            box-shadow: 0 0 25px #4ea0ee;
             transform: scale(0.9);
         }
     </style>
@@ -51,18 +54,39 @@
         <a-entity mindar-image-target="targetIndex: 0">
             <a-entity id="aris-root" position="0 -0.8 0.01">
                 <a-entity id="aris-rotation">
-                    <a-gltf-model id="arisIdle" src="#mIdle" scale="0.3 0.3 0.3" animation-mixer></a-gltf-model>
-                    <a-gltf-model id="arisWalk" src="#mWalk" scale="0 0 0" animation-mixer></a-gltf-model>
-                    <a-gltf-model id="arisStop" src="#mStop" scale="0 0 0"></a-gltf-model>
-                    <a-gltf-model id="arisAtkStart" src="#aStart" scale="0 0 0"></a-gltf-model>
-                    <a-gltf-model id="arisAtkMid" src="#aMid" scale="0 0 0"></a-gltf-model>
-                    <a-gltf-model id="arisAtkEnd" src="#aEnd" scale="0 0 0"></a-gltf-model>
+                    <a-gltf-model id="arisIdle" src="#mIdle" scale="0.3 0.3 0.3" model-opacity="1" animation-mixer></a-gltf-model>
+                    <a-gltf-model id="arisWalk" src="#mWalk" scale="0.3 0.3 0.3" model-opacity="0" animation-mixer></a-gltf-model>
+                    <a-gltf-model id="arisStop" src="#mStop" scale="0.3 0.3 0.3" model-opacity="0"></a-gltf-model>
+                    <a-gltf-model id="arisAtkStart" src="#aStart" scale="0.3 0.3 0.3" model-opacity="0"></a-gltf-model>
+                    <a-gltf-model id="arisAtkMid" src="#aMid" scale="0.3 0.3 0.3" model-opacity="0"></a-gltf-model>
+                    <a-gltf-model id="arisAtkEnd" src="#aEnd" scale="0.3 0.3 0.3" model-opacity="0"></a-gltf-model>
                 </a-entity>
             </a-entity>
         </a-entity>
     </a-scene>
 
     <script>
+        // --- COMPONENT CHỐNG A-POSE BẰNG OPACITY ---
+        AFRAME.registerComponent('model-opacity', {
+            schema: {default: 1.0},
+            init: function () {
+                this.el.addEventListener('model-loaded', () => this.update());
+            },
+            update: function () {
+                var mesh = this.el.getObject3D('mesh');
+                var data = this.data;
+                if (!mesh) return;
+                mesh.traverse(function (node) {
+                    if (node.isMesh) {
+                        node.material.transparent = true;
+                        node.material.opacity = data;
+                        // Vẫn dùng visible để tối ưu render, nhưng xương không bị reset
+                        node.visible = (data > 0);
+                    }
+                });
+            }
+        });
+
         const btn = document.getElementById('attack-btn');
         const models = {
             idle: document.querySelector('#arisIdle'),
@@ -78,14 +102,16 @@
         let isHolding = false;
         let moveData = { x: 0, z: 0, active: false };
 
-        // Hàm đổi model bằng Scale để giữ xương (Skeleton) trong bộ nhớ
+        // Hàm chuyển đổi Model bằng cách thay đổi độ trong suốt
         function setModel(type) {
             Object.keys(models).forEach(k => {
-                models[k].setAttribute('scale', k === type ? '0.3 0.3 0.3' : '0 0 0');
+                models[k].setAttribute('model-opacity', k === type ? 1 : 0);
             });
         }
 
-        // --- CHUỖI SỰ KIỆN ---
+        // --- HỆ THỐNG ANIMATION FLOW ---
+
+        // Khi Start xong: Kiểm tra nếu vẫn đang giữ thì sang Mid
         models.atkStart.addEventListener('animation-finished', () => {
             if (isHolding) {
                 setModel('atkMid');
@@ -94,6 +120,7 @@
             }
         });
 
+        // Khi End xong: Về lại Idle hoặc Walk tùy trạng thái Joystick
         models.atkEnd.addEventListener('animation-finished', () => {
             if (!isHolding) {
                 if (moveData.active) setModel('walk');
@@ -101,11 +128,12 @@
             }
         });
 
+        // Khi Stop xong: Về Idle
         models.stop.addEventListener('animation-finished', () => {
             if (!moveData.active && !isHolding) setModel('idle');
         });
 
-        // --- JOYSTICK ---
+        // --- ĐIỀU KHIỂN JOYSTICK ---
         const manager = nipplejs.create({
             zone: document.getElementById('joystick-zone'),
             mode: 'static', position: {left: '75px', bottom: '75px'}, color: 'cyan'
@@ -127,7 +155,7 @@
             }
         });
 
-        // --- NÚT TẤN CÔNG ---
+        // --- LOGIC NHẤN GIỮ (ATTACK) ---
         btn.addEventListener('touchstart', (e) => {
             e.preventDefault();
             isHolding = true;
@@ -146,13 +174,14 @@
             models.atkEnd.setAttribute('animation-mixer', {clip: '*', loop: 'once', clampWhenFinished: true});
         });
 
-        // --- CẬP NHẬT TỌA ĐỘ ---
+        // --- CẬP NHẬT VỊ TRÍ (GAME LOOP) ---
         function update() {
             if (moveData.active && !isHolding) {
-                let pos = root.getAttribute('position');
-                pos.x += moveData.x * 0.05;
-                pos.z += moveData.z * 0.05;
-                root.setAttribute('position', pos);
+                let currPos = root.getAttribute('position');
+                currPos.x += moveData.x * 0.05;
+                currPos.z += moveData.z * 0.05;
+                root.setAttribute('position', currPos);
+                
                 let angleDeg = Math.atan2(moveData.x, moveData.z) * (180 / Math.PI);
                 rotWrapper.setAttribute('rotation', `0 ${angleDeg} 0`);
             }
