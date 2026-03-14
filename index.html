@@ -2,7 +2,7 @@
 <html>
 <head>
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Aris AR - Absolute Axis Fix</title>
+    <title>Aris AR - Final Smooth Version</title>
     <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
     <script src="https://cdn.jsdelivr.net/gh/donmccurdy/aframe-extras@v7.0.0/dist/aframe-extras.min.js"></script>
@@ -38,9 +38,12 @@
         <a-entity mindar-image-target="targetIndex: 0">
             <a-entity id="aris-root" position="0 -0.8 0.01">
                 <a-entity id="aris-rotation" rotation="0 0 0">
-                    <a-gltf-model id="arisIdle" src="#mIdle" rotation="0 0 0" scale="0.3 0.3 0.3" visible="true" animation-mixer></a-gltf-model>
-                    <a-gltf-model id="arisWalk" src="#mWalk" rotation="0 0 0" scale="0.3 0.3 0.3" visible="false" animation-mixer="timeScale: 1.2"></a-gltf-model>
-                    <a-gltf-model id="arisStop" src="#mStop" rotation="0 0 0" scale="0.3 0.3 0.3" visible="false" animation-mixer="loop: once; clampWhenFinished: true"></a-gltf-model>
+                    
+                    <a-gltf-model id="arisIdle" src="#mIdle" scale="0.3 0.3 0.3" visible="true" animation-mixer></a-gltf-model>
+                    <a-gltf-model id="arisWalk" src="#mWalk" scale="0.3 0.3 0.3" visible="false" animation-mixer="timeScale: 1.2"></a-gltf-model>
+                    <a-gltf-model id="arisStop" src="#mStop" scale="0.3 0.3 0.3" visible="false" 
+                        animation-mixer="loop: once; clampWhenFinished: true"></a-gltf-model>
+                
                 </a-entity>
             </a-entity>
         </a-entity>
@@ -59,8 +62,7 @@
         
         let pos = { x: 0, y: -0.8, z: 0.01 }; 
         let moveData = { x: 0, z: 0, active: false };
-        const moveSpeed = 0.05; 
-        let stopTimeout;
+        const moveSpeed = 0.05;
 
         const manager = nipplejs.create({
             zone: document.getElementById('joystick-zone'),
@@ -70,44 +72,47 @@
         });
 
         function showModel(type) {
-            Object.keys(models).forEach(k => { models[k].setAttribute('visible', k === type); });
+            Object.keys(models).forEach(k => { 
+                models[k].setAttribute('visible', k === type); 
+            });
         }
 
+        // Logic xử lý kết thúc animation Stop mượt mà
+        models.stop.addEventListener('animation-finished', () => {
+            if (!moveData.active) {
+                showModel('idle');
+            }
+        });
+
         manager.on('move', (evt, data) => {
-            clearTimeout(stopTimeout);
             moveData.active = true;
-            
-            // Lấy trực tiếp vector từ Joystick
-            // data.vector.x: Trái (-), Phải (+)
-            // data.vector.y: Lên (+), Xuống (-)
-            
             moveData.x = data.vector.x; 
-            moveData.z = -data.vector.y; // Đảo dấu để đẩy lên là đi xa camera (vào trong ảnh)
-            
+            moveData.z = -data.vector.y; // Đẩy lên là vào sâu trong ảnh
             showModel('walk');
         });
 
         manager.on('end', () => {
             moveData.active = false;
             showModel('stop');
+            
+            // Kích hoạt lại animation Stop từ frame đầu tiên
             models.stop.removeAttribute('animation-mixer');
-            models.stop.setAttribute('animation-mixer', 'loop: once; clampWhenFinished: true');
-            stopTimeout = setTimeout(() => { if (!moveData.active) showModel('idle'); }, 800);
+            models.stop.setAttribute('animation-mixer', {
+                clip: '*',
+                loop: 'once',
+                clampWhenFinished: true
+            });
         });
 
         function update() {
             if (moveData.active) {
-                // Cập nhật vị trí
                 pos.x += moveData.x * moveSpeed;
                 pos.z += moveData.z * moveSpeed;
                 root.setAttribute('position', `${pos.x} ${pos.y} ${pos.z}`);
                 
-                // TÍNH GÓC XOAY CHUẨN:
-                // Dùng Math.atan2(x, z) để tìm góc dựa trên hướng di chuyển hiện tại
-                // Sau đó đổi từ Radian sang Degree và xoay quanh trục Y
+                // Tính toán hướng xoay mặt chuẩn xác
                 let angleRad = Math.atan2(moveData.x, moveData.z);
                 let angleDeg = angleRad * (180 / Math.PI);
-                
                 rotWrapper.setAttribute('rotation', `0 ${angleDeg} 0`);
             }
             requestAnimationFrame(update);
