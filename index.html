@@ -2,57 +2,46 @@
 <html>
 <head>
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Aris AR - 3 Files Test</title>
+    <title>Aris AR Pro - No Marker - Fast Speed</title>
     <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
     <script src="https://cdn.jsdelivr.net/gh/donmccurdy/aframe-extras@v7.0.0/dist/aframe-extras.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/nipplejs/0.10.1/nipplejs.min.js"></script>
 
     <style>
-        #ui {
-            position: fixed;
-            bottom: 30px;
-            left: 50%;
-            transform: translateX(-50%);
-            display: grid;
-            grid-template-columns: repeat(3, 75px);
-            grid-gap: 15px;
-            z-index: 1000;
+        body { margin: 0; overflow: hidden; background-color: #000; font-family: sans-serif; }
+        #joystick-zone { 
+            position: fixed; 
+            bottom: 40px; 
+            left: 40px; 
+            width: 150px; 
+            height: 150px; 
+            z-index: 1000; 
         }
-        .btn {
-            width: 75px;
-            height: 75px;
-            background: rgba(0, 0, 0, 0.6);
+        #reset-btn {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 12px 24px;
+            background: rgba(0, 255, 255, 0.2);
             color: #00ffff;
             border: 2px solid #00ffff;
-            border-radius: 50%;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            font-size: 30px;
+            border-radius: 10px;
             font-weight: bold;
-            user-select: none;
-            -webkit-tap-highlight-color: transparent;
-            touch-action: none;
-        }
-        .btn:active {
-            background: rgba(0, 255, 255, 0.4);
-            color: white;
+            z-index: 1000;
+            cursor: pointer;
         }
     </style>
 </head>
 
 <body>
-    <div id="ui">
-        <div></div><div id="up" class="btn">↑</div><div></div>
-        <div id="left" class="btn">←</div><div id="down" class="btn">↓</div><div id="right" class="btn">→</div>
-    </div>
+    <button id="reset-btn">TRIỆU HỒI ARIS</button>
+    <div id="joystick-zone"></div>
 
     <a-scene 
-        mindar-image="imageTargetSrc: targets.mind;" 
-        color-space="sRGB" 
-        renderer="colorManagement: true, physicallyCorrectLights: true" 
-        vr-mode-ui="enabled: false" 
-        device-orientation-permission-ui="enabled: false">
+        embedded 
+        arjs="sourceType: webcam; debugUIEnabled: false;" 
+        vr-mode-ui="enabled: false"
+        renderer="antialias: false; logarithmicDepthBuffer: true; colorManagement: true;">
 
         <a-assets>
             <a-asset-item id="mIdle" src="Walk_Idle.glb"></a-asset-item>
@@ -60,32 +49,49 @@
             <a-asset-item id="mStop" src="Walk_Stop.glb"></a-asset-item>
         </a-assets>
 
-        <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
+        <a-camera id="cam" look-controls="enabled: true" wasd-controls-enabled="false"></a-camera>
 
-        <a-entity mindar-image-target="targetIndex: 0">
-            <a-entity id="aris-root" position="0 0 0">
-                <a-gltf-model id="arisIdle" src="#mIdle" rotation="90 0 0" scale="0.5 0.5 0.5" animation-mixer visible="true"></a-gltf-model>
-                <a-gltf-model id="arisWalk" src="#mWalk" rotation="90 0 0" scale="0.5 0.5 0.5" animation-mixer visible="false"></a-gltf-model>
-                <a-gltf-model id="arisStop" src="#mStop" rotation="90 0 0" scale="0.5 0.5 0.5" animation-mixer visible="false"></a-gltf-model>
+        <a-entity id="aris-root" position="0 -1.5 -3"> 
+            
+            <a-entity id="aris-rotation" rotation="0 0 0">
+                
+                <a-gltf-model id="arisIdle" src="#mIdle" scale="0.5 0.5 0.5" visible="true" 
+                    animation-mixer="clip: *; loop: repeat"></a-gltf-model>
+                
+                <a-gltf-model id="arisWalk" src="#mWalk" scale="0.5 0.5 0.5" visible="false" 
+                    animation-mixer="clip: *; loop: repeat; timeScale: 1.5"></a-gltf-model>
+                
+                <a-gltf-model id="arisStop" src="#mStop" scale="0.5 0.5 0.5" visible="false" 
+                    animation-mixer="clip: *; loop: once; clampWhenFinished: true"></a-gltf-model>
+            
             </a-entity>
         </a-entity>
 
-        <a-light type="ambient" intensity="1.2"></a-light>
-        <a-light type="directional" position="0 2 2" intensity="1"></a-light>
+        <a-light type="ambient" intensity="1.5"></a-light>
+        <a-light type="directional" position="1 2 1" intensity="1"></a-light>
     </a-scene>
 
     <script>
         const root = document.querySelector('#aris-root');
-        const models = {
-            idle: document.querySelector('#arisIdle'),
-            walk: document.querySelector('#arisWalk'),
-            stop: document.querySelector('#arisStop')
+        const rotWrapper = document.querySelector('#aris-rotation');
+        const models = { 
+            idle: document.querySelector('#arisIdle'), 
+            walk: document.querySelector('#arisWalk'), 
+            stop: document.querySelector('#arisStop') 
         };
+        
+        let pos = { x: 0, y: -1.5, z: -3 }; 
+        let moveData = { x: 0, z: 0, active: false, angle: 0 };
+        const moveSpeed = 0.06; // Đã tăng tốc độ di chuyển
+        let stopTimeout;
 
-        let pos = { x: 0, y: 0 };
-        let keys = { up: false, down: false, left: false, right: false };
-        const moveSpeed = 0.015; 
-        let currentRot = 0;
+        // Cấu hình Joystick
+        const manager = nipplejs.create({
+            zone: document.getElementById('joystick-zone'),
+            mode: 'static',
+            position: { left: '75px', bottom: '75px' },
+            color: 'cyan'
+        });
 
         function showModel(type) {
             Object.keys(models).forEach(k => {
@@ -93,46 +99,46 @@
             });
         }
 
-        const setup = (id, key) => {
-            const el = document.getElementById(id);
-            el.addEventListener('touchstart', (e) => {
-                e.preventDefault();
-                keys[key] = true;
-                showModel('walk');
-            });
+        manager.on('move', (evt, data) => {
+            clearTimeout(stopTimeout);
+            moveData.active = true;
+            
+            // Tính hướng dựa trên Joystick
+            moveData.x = Math.cos(data.angle.radian);
+            moveData.z = -Math.sin(data.angle.radian);
+            moveData.angle = data.angle.degree - 90;
+            
+            showModel('walk');
+        });
 
-            el.addEventListener('touchend', (e) => {
-                e.preventDefault();
-                keys[key] = false;
-                if (!Object.values(keys).includes(true)) {
-                    showModel('stop');
-                    // Đợi 800ms cho hành động dừng kết thúc rồi về đứng im
-                    setTimeout(() => {
-                        if (!Object.values(keys).includes(true)) showModel('idle');
-                    }, 800);
-                }
-            });
-        };
+        manager.on('end', () => {
+            moveData.active = false;
+            showModel('stop');
+            
+            // Reset animation Stop
+            models.stop.removeAttribute('animation-mixer');
+            models.stop.setAttribute('animation-mixer', 'clip: *; loop: once; clampWhenFinished: true');
 
-        ['up', 'down', 'left', 'right'].forEach(k => setup(k, k));
+            stopTimeout = setTimeout(() => {
+                if (!moveData.active) showModel('idle');
+            }, 800);
+        });
 
+        // Nút Triệu hồi Aris về trước mặt
+        document.getElementById('reset-btn').addEventListener('click', () => {
+            pos = { x: 0, y: -1.5, z: -3 };
+            root.setAttribute('position', "0 -1.5 -3");
+            rotWrapper.setAttribute('rotation', "0 0 0");
+        });
+
+        // Vòng lặp cập nhật khung hình
         function update() {
-            let moved = false;
-            let dx = 0;
-            let dy = 0;
-
-            if (keys.up)    { dy += moveSpeed; currentRot = 180; moved = true; }
-            if (keys.down)  { dy -= moveSpeed; currentRot = 0;   moved = true; }
-            if (keys.left)  { dx -= moveSpeed; currentRot = -90; moved = true; }
-            if (keys.right) { dx += moveSpeed; currentRot = 90;  moved = true; }
-
-            if (moved) {
-                pos.x += dx;
-                pos.y += dy;
-                root.setAttribute('position', `${pos.x} ${pos.y} 0`);
-                Object.values(models).forEach(m => {
-                    m.setAttribute('rotation', `90 ${currentRot} 0`);
-                });
+            if (moveData.active) {
+                pos.x += moveData.x * moveSpeed;
+                pos.z += moveData.z * moveSpeed;
+                
+                root.setAttribute('position', `${pos.x} ${pos.y} ${pos.z}`);
+                rotWrapper.setAttribute('rotation', `0 ${-moveData.angle} 0`);
             }
             requestAnimationFrame(update);
         }
