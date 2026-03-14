@@ -2,7 +2,7 @@
 <html>
 <head>
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Aris AR - Corrected Camera Axis</title>
+    <title>Aris AR - Final Corrected</title>
     <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
     <script src="https://cdn.jsdelivr.net/gh/donmccurdy/aframe-extras@v7.0.0/dist/aframe-extras.min.js"></script>
@@ -79,13 +79,13 @@
             clearTimeout(stopTimeout);
             moveData.active = true;
             
-            // ĐẢO TRỤC:
-            // Thêm dấu trừ (-) để kéo xuống là đi vào trong, đẩy lên là đi ra ngoài camera
+            // X ngang, Z đẩy lên là tiến về camera (z tăng), kéo xuống là lùi (z giảm)
             moveData.x = Math.cos(data.angle.radian);
-            moveData.z = -Math.sin(data.angle.radian); 
+            moveData.z = Math.sin(data.angle.radian); 
             
-            // Cập nhật lại góc xoay để mặt nhìn đúng hướng sau khi đảo trục
-            moveData.angle = data.angle.degree + 90; 
+            // TÍNH LẠI GÓC XOAY MẶT:
+            // Lấy góc gốc của Joystick trừ đi 90 độ để khớp với hướng quay của Aris
+            moveData.angle = data.angle.degree - 90; 
             
             showModel('walk');
         });
@@ -100,14 +100,13 @@
 
         function update() {
             if (moveData.active) {
-                // Di chuyển
                 pos.x += moveData.x * moveSpeed;
                 pos.z += moveData.z * moveSpeed;
                 
                 root.setAttribute('position', `${pos.x} ${pos.y} ${pos.z}`);
                 
-                // Xoay mặt Aris quanh trục đứng Y
-                // Dùng -moveData.angle vì hệ tọa độ xoay của A-Frame ngược chiều Joystick
+                // Cập nhật hướng xoay quanh trục Y
+                // Dùng dấu âm (-) để khớp với hệ trục A-Frame
                 rotWrapper.setAttribute('rotation', `0 ${-moveData.angle} 0`);
             }
             requestAnimationFrame(update);
