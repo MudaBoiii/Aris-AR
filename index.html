@@ -2,7 +2,7 @@
 <html>
 <head>
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Aris AR - Final Master</title>
+    <title>Aris AR - Final Blue Edition</title>
     <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
     <script src="https://cdn.jsdelivr.net/gh/donmccurdy/aframe-extras@v7.0.0/dist/aframe-extras.min.js"></script>
@@ -11,15 +11,25 @@
     <style>
         body { margin: 0; overflow: hidden; touch-action: none; background: #000; }
         #joystick-zone { position: fixed; bottom: 30px; left: 30px; width: 150px; height: 150px; z-index: 3000; }
+        
         #attack-btn {
             position: fixed; bottom: 60px; right: 60px; width: 85px; height: 85px;
-            background: rgba(255, 255, 255, 0.15); border: 5px solid #fff; border-radius: 50%;
+            background: rgba(255, 255, 255, 0.15); 
+            border: 5px solid #fff; 
+            border-radius: 50%;
             color: white; font-size: 35px; font-weight: bold; z-index: 3000;
             display: flex; align-items: center; justify-content: center;
             user-select: none; -webkit-tap-highlight-color: transparent;
-            box-shadow: 0 0 15px rgba(0,0,0,0.5);
+            transition: all 0.2s ease-out;
         }
-        #attack-btn:active { background: rgba(255, 255, 255, 0.4); transform: scale(0.9); }
+
+        /* Nút A sáng xanh dương #4ea0ee khi đang combo */
+        #attack-btn.active-atk {
+            background: rgba(78, 160, 238, 0.7) !important; 
+            border-color: #4ea0ee !important;
+            box-shadow: 0 0 25px #4ea0ee;
+            transform: scale(1.1);
+        }
     </style>
 </head>
 
@@ -28,14 +38,14 @@
     <div id="attack-btn">A</div>
 
     <a-scene 
-        mindar-image="imageTargetSrc: targets.mind; missTolerance: 10000; stayVisible: true; filterMinCF: 0.0001; filterBeta: 0.001;" 
-        renderer="colorManagement: true; antialias: true;" vr-mode-ui="enabled: false" device-orientation-permission-ui="enabled: false">
+        mindar-image="imageTargetSrc: targets.mind; missTolerance: 10000; stayVisible: true;" 
+        renderer="colorManagement: true; antialias: true;" vr-mode-ui="enabled: false"
+        device-orientation-permission-ui="enabled: false">
 
         <a-assets>
             <a-asset-item id="mIdle" src="Movement/Walk_Idle.glb"></a-asset-item>
             <a-asset-item id="mWalk" src="Movement/Walk.glb"></a-asset-item>
             <a-asset-item id="mStop" src="Movement/Walk_Stop.glb"></a-asset-item>
-            
             <a-asset-item id="aStart" src="Normal_Attack/Start.glb"></a-asset-item>
             <a-asset-item id="aMid" src="Normal_Attack/Mid.glb"></a-asset-item>
             <a-asset-item id="aEnd" src="Normal_Attack/End.glb"></a-asset-item>
@@ -46,13 +56,12 @@
 
         <a-entity mindar-image-target="targetIndex: 0">
             <a-entity id="aris-root" position="0 -0.8 0.01">
-                <a-entity id="aris-rotation" rotation="0 0 0">
+                <a-entity id="aris-rotation">
                     <a-gltf-model id="arisIdle" src="#mIdle" scale="0.3 0.3 0.3" visible="true" animation-mixer></a-gltf-model>
                     <a-gltf-model id="arisWalk" src="#mWalk" scale="0.3 0.3 0.3" visible="false" animation-mixer></a-gltf-model>
                     <a-gltf-model id="arisStop" src="#mStop" scale="0.3 0.3 0.3" visible="false"></a-gltf-model>
-                    
                     <a-gltf-model id="arisAtkStart" src="#aStart" scale="0.3 0.3 0.3" visible="false"></a-gltf-model>
-                    <a-gltf-model id="arisAtkMid" src="#aMid" scale="0.3 0.3 0.3" visible="false" animation-mixer></a-gltf-model>
+                    <a-gltf-model id="arisAtkMid" src="#aMid" scale="0.3 0.3 0.3" visible="false"></a-gltf-model>
                     <a-gltf-model id="arisAtkEnd" src="#aEnd" scale="0.3 0.3 0.3" visible="false"></a-gltf-model>
                 </a-entity>
             </a-entity>
@@ -62,6 +71,7 @@
     <script>
         const root = document.querySelector('#aris-root');
         const rotWrapper = document.querySelector('#aris-rotation');
+        const btn = document.getElementById('attack-btn');
         const models = {
             idle: document.querySelector('#arisIdle'),
             walk: document.querySelector('#arisWalk'),
@@ -75,22 +85,35 @@
         let isAttacking = false;
 
         function showModel(type) {
-            Object.keys(models).forEach(k => {
-                models[k].setAttribute('visible', k === type);
-            });
+            Object.keys(models).forEach(k => models[k].setAttribute('visible', k === type));
         }
 
-        // --- XỬ LÝ CHUỖI ANIMATION ---
-        models.stop.addEventListener('animation-finished', () => {
-            if (!moveData.active && !isAttacking) showModel('idle');
+        // --- COMBO SEQUENCE ---
+        models.atkStart.addEventListener('animation-finished', () => {
+            if (isAttacking) {
+                showModel('atkMid');
+                models.atkMid.removeAttribute('animation-mixer');
+                models.atkMid.setAttribute('animation-mixer', {clip: '*', loop: 'once', clampWhenFinished: true});
+            }
         });
 
-        models.atkStart.addEventListener('animation-finished', () => {
-            if (isAttacking) showModel('atkMid');
+        models.atkMid.addEventListener('animation-finished', () => {
+            if (isAttacking) {
+                showModel('atkEnd');
+                models.atkEnd.removeAttribute('animation-mixer');
+                models.atkEnd.setAttribute('animation-mixer', {clip: '*', loop: 'once', clampWhenFinished: true});
+            }
         });
 
         models.atkEnd.addEventListener('animation-finished', () => {
-            if (!isAttacking && !moveData.active) showModel('idle');
+            isAttacking = false;
+            btn.classList.remove('active-atk');
+            if (moveData.active) showModel('walk');
+            else showModel('idle');
+        });
+
+        models.stop.addEventListener('animation-finished', () => {
+            if (!moveData.active && !isAttacking) showModel('idle');
         });
 
         // --- JOYSTICK ---
@@ -100,11 +123,10 @@
         });
 
         manager.on('move', (evt, data) => {
-            if (isAttacking) return;
-            moveData.active = true;
-            moveData.x = data.vector.x;
+            moveData.x = data.vector.x; 
             moveData.z = -data.vector.y;
-            showModel('walk');
+            moveData.active = true;
+            if (!isAttacking) showModel('walk');
         });
 
         manager.on('end', () => {
@@ -116,31 +138,18 @@
             }
         });
 
-        // --- NÚT A (ATTACK) ---
-        const btn = document.getElementById('attack-btn');
-        
+        // --- NÚT A ---
         btn.addEventListener('touchstart', (e) => {
             e.preventDefault();
             if (isAttacking) return;
             isAttacking = true;
-            moveData.active = false; // Chặn di chuyển ngay lập tức
-
+            btn.classList.add('active-atk');
+            
             showModel('atkStart');
             models.atkStart.removeAttribute('animation-mixer');
             models.atkStart.setAttribute('animation-mixer', {clip: '*', loop: 'once', clampWhenFinished: true});
         });
 
-        btn.addEventListener('touchend', (e) => {
-            e.preventDefault();
-            if (!isAttacking) return;
-            isAttacking = false;
-
-            showModel('atkEnd');
-            models.atkEnd.removeAttribute('animation-mixer');
-            models.atkEnd.setAttribute('animation-mixer', {clip: '*', loop: 'once', clampWhenFinished: true});
-        });
-
-        // --- GAME LOOP ---
         function update() {
             if (moveData.active && !isAttacking) {
                 let currPos = root.getAttribute('position');
