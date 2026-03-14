@@ -2,7 +2,7 @@
 <html>
 <head>
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Aris AR - Final Smooth Version</title>
+    <title>Aris AR - Custom Frame Version</title>
     <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
     <script src="https://cdn.jsdelivr.net/gh/donmccurdy/aframe-extras@v7.0.0/dist/aframe-extras.min.js"></script>
@@ -38,12 +38,9 @@
         <a-entity mindar-image-target="targetIndex: 0">
             <a-entity id="aris-root" position="0 -0.8 0.01">
                 <a-entity id="aris-rotation" rotation="0 0 0">
-                    
                     <a-gltf-model id="arisIdle" src="#mIdle" scale="0.3 0.3 0.3" visible="true" animation-mixer></a-gltf-model>
                     <a-gltf-model id="arisWalk" src="#mWalk" scale="0.3 0.3 0.3" visible="false" animation-mixer="timeScale: 1.2"></a-gltf-model>
-                    <a-gltf-model id="arisStop" src="#mStop" scale="0.3 0.3 0.3" visible="false" 
-                        animation-mixer="loop: once; clampWhenFinished: true"></a-gltf-model>
-                
+                    <a-gltf-model id="arisStop" src="#mStop" scale="0.3 0.3 0.3" visible="false" animation-mixer="loop: once; clampWhenFinished: true"></a-gltf-model>
                 </a-entity>
             </a-entity>
         </a-entity>
@@ -64,6 +61,12 @@
         let moveData = { x: 0, z: 0, active: false };
         const moveSpeed = 0.05;
 
+        // --- CẤU HÌNH FRAME TÙY CHỈNH ---
+        const FPS = 24;
+        const TARGET_STOP_FRAME = 48; // Bạn chỉnh số frame muốn dừng tại đây (ví dụ: 30, 40...)
+        const STOP_DURATION_MS = (TARGET_STOP_FRAME / FPS) * 1000;
+        // --------------------------------
+
         const manager = nipplejs.create({
             zone: document.getElementById('joystick-zone'),
             mode: 'static',
@@ -77,17 +80,10 @@
             });
         }
 
-        // Logic xử lý kết thúc animation Stop mượt mà
-        models.stop.addEventListener('animation-finished', () => {
-            if (!moveData.active) {
-                showModel('idle');
-            }
-        });
-
         manager.on('move', (evt, data) => {
             moveData.active = true;
             moveData.x = data.vector.x; 
-            moveData.z = -data.vector.y; // Đẩy lên là vào sâu trong ảnh
+            moveData.z = -data.vector.y; 
             showModel('walk');
         });
 
@@ -95,13 +91,21 @@
             moveData.active = false;
             showModel('stop');
             
-            // Kích hoạt lại animation Stop từ frame đầu tiên
-            models.stop.removeAttribute('animation-mixer');
-            models.stop.setAttribute('animation-mixer', {
+            const stopEl = models.stop;
+            // Reset animation mixer để chạy lại từ đầu
+            stopEl.removeAttribute('animation-mixer');
+            stopEl.setAttribute('animation-mixer', {
                 clip: '*',
                 loop: 'once',
                 clampWhenFinished: true
             });
+
+            // Đợi chạy hết số frame đã định rồi mới chuyển sang Idle
+            setTimeout(() => {
+                if (!moveData.active) {
+                    showModel('idle');
+                }
+            }, STOP_DURATION_MS);
         });
 
         function update() {
@@ -110,7 +114,6 @@
                 pos.z += moveData.z * moveSpeed;
                 root.setAttribute('position', `${pos.x} ${pos.y} ${pos.z}`);
                 
-                // Tính toán hướng xoay mặt chuẩn xác
                 let angleRad = Math.atan2(moveData.x, moveData.z);
                 let angleDeg = angleRad * (180 / Math.PI);
                 rotWrapper.setAttribute('rotation', `0 ${angleDeg} 0`);
