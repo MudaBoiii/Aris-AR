@@ -2,30 +2,37 @@
 <html>
 <head>
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Aris AR - Final Scaled</title>
+    <title>Aris AR - Markerless Pro</title>
     <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
     <script src="https://cdn.jsdelivr.net/gh/donmccurdy/aframe-extras@v7.0.0/dist/aframe-extras.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/nipplejs/0.10.1/nipplejs.min.js"></script>
 
     <style>
-        body { margin: 0; overflow: hidden; }
+        body { margin: 0; overflow: hidden; background-color: #000; }
+        /* Khu vực Joystick */
         #joystick-zone { 
             position: fixed; bottom: 40px; left: 40px; 
             width: 150px; height: 150px; z-index: 2000; 
+        }
+        /* Nút Reset để triệu hồi Aris về trước mặt nếu bị lạc */
+        #reset-btn {
+            position: fixed; top: 20px; right: 20px;
+            padding: 12px 24px; background: rgba(0, 255, 255, 0.2);
+            color: #00ffff; border: 2px solid #00ffff;
+            border-radius: 10px; font-weight: bold; z-index: 2000;
         }
     </style>
 </head>
 
 <body>
+    <button id="reset-btn">TRIỆU HỒI ARIS</button>
     <div id="joystick-zone"></div>
 
     <a-scene 
-        mindar-image="imageTargetSrc: targets.mind; filterMinCF: 0.0001; filterBeta: 0.001; missTolerance: 10000;" 
-        color-space="sRGB" 
-        renderer="colorManagement: true; antialias: false;" 
-        vr-mode-ui="enabled: false" 
-        device-orientation-permission-ui="enabled: false">
+        embedded 
+        arjs="sourceType: webcam; debugUIEnabled: false;" 
+        vr-mode-ui="enabled: false"
+        renderer="antialias: false; logarithmicDepthBuffer: true; colorManagement: true;">
 
         <a-assets>
             <a-asset-item id="mIdle" src="Walk_Idle.glb"></a-asset-item>
@@ -33,81 +40,22 @@
             <a-asset-item id="mStop" src="Walk_Stop.glb"></a-asset-item>
         </a-assets>
 
-        <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
+        <a-camera id="cam" look-controls="enabled: true" wasd-controls-enabled="false"></a-camera>
 
-        <a-entity mindar-image-target="targetIndex: 0">
-            <a-entity id="aris-root" position="0 0 -0.2">
+        <a-entity id="aris-root" position="0 -1.5 -3"> 
+            
+            <a-entity id="aris-rotation" rotation="0 0 0">
                 
-                <a-entity id="aris-rotation" rotation="0 0 0">
-                    
-                    <a-gltf-model id="arisIdle" src="#mIdle" rotation="90 0 0" scale="0.36 0.36 0.36" visible="true" animation-mixer></a-gltf-model>
-                    <a-gltf-model id="arisWalk" src="#mWalk" rotation="90 0 0" scale="0.36 0.36 0.36" visible="false" animation-mixer="timeScale: 1.2"></a-gltf-model>
-                    <a-gltf-model id="arisStop" src="#mStop" rotation="90 0 0" scale="0.36 0.36 0.36" visible="false" animation-mixer="loop: once; clampWhenFinished: true"></a-gltf-model>
+                <a-gltf-model id="arisIdle" src="#mIdle" scale="0.36 0.36 0.36" visible="true" 
+                    animation-mixer></a-gltf-model>
                 
-                </a-entity>
+                <a-gltf-model id="arisWalk" src="#mWalk" scale="0.36 0.36 0.36" visible="false" 
+                    animation-mixer="timeScale: 1.2"></a-gltf-model>
+                
+                <a-gltf-model id="arisStop" src="#mStop" scale="0.36 0.36 0.36" visible="false" 
+                    animation-mixer="loop: once; clampWhenFinished: true"></a-gltf-model>
+            
             </a-entity>
         </a-entity>
 
-        <a-light type="ambient" intensity="1.2"></a-light>
-    </a-scene>
-
-    <script>
-        const root = document.querySelector('#aris-root');
-        const rotWrapper = document.querySelector('#aris-rotation');
-        const models = { 
-            idle: document.querySelector('#arisIdle'), 
-            walk: document.querySelector('#arisWalk'), 
-            stop: document.querySelector('#arisStop') 
-        };
-        
-        // Vị trí khởi tạo khớp với Root Position (x=0, y=0, z=-0.2)
-        let pos = { x: 0, y: 0, z: -0.2 }; 
-        let moveData = { x: 0, y: 0, active: false, angle: 0 };
-        const moveSpeed = 0.05; 
-        let stopTimeout;
-
-        const manager = nipplejs.create({
-            zone: document.getElementById('joystick-zone'),
-            mode: 'static',
-            position: { left: '75px', bottom: '75px' },
-            color: 'cyan'
-        });
-
-        function showModel(type) {
-            Object.keys(models).forEach(k => { models[k].setAttribute('visible', k === type); });
-        }
-
-        manager.on('move', (evt, data) => {
-            clearTimeout(stopTimeout);
-            moveData.active = true;
-            moveData.x = Math.cos(data.angle.radian);
-            moveData.y = Math.sin(data.angle.radian);
-            moveData.angle = data.angle.degree + 90; 
-            showModel('walk');
-        });
-
-        manager.on('end', () => {
-            moveData.active = false;
-            showModel('stop');
-            models.stop.removeAttribute('animation-mixer');
-            models.stop.setAttribute('animation-mixer', 'loop: once; clampWhenFinished: true');
-
-            stopTimeout = setTimeout(() => { 
-                if (!moveData.active) showModel('idle'); 
-            }, 800);
-        });
-
-        function update() {
-            if (moveData.active) {
-                pos.x += moveData.x * moveSpeed;
-                pos.y += moveData.y * moveSpeed;
-                // Giữ nguyên độ sâu Z khi di chuyển
-                root.setAttribute('position', `${pos.x} ${pos.y} ${pos.z}`);
-                rotWrapper.setAttribute('rotation', `0 0 ${moveData.angle}`);
-            }
-            requestAnimationFrame(update);
-        }
-        update();
-    </script>
-</body>
-</html>
+        <a-light type="ambient" intensity="1.5"></a-light>
