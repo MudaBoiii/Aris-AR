@@ -2,7 +2,7 @@
 <html>
 <head>
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Aris AR - PC & Mobile Master</title>
+    <title>Aris AR - Mobile Final Clean</title>
     <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
     <script src="https://cdn.jsdelivr.net/gh/donmccurdy/aframe-extras@v7.0.0/dist/aframe-extras.min.js"></script>
@@ -11,36 +11,25 @@
     <style>
         body { margin: 0; overflow: hidden; touch-action: none; background: #000; }
         #joystick-zone { position: fixed; bottom: 30px; left: 30px; width: 150px; height: 150px; z-index: 3000; }
-        
         #attack-btn {
             position: fixed; bottom: 60px; right: 60px; width: 85px; height: 85px;
             background: rgba(255, 255, 255, 0.15); border: 5px solid #fff; border-radius: 50%;
             color: white; font-size: 35px; font-weight: bold; z-index: 3000;
             display: flex; align-items: center; justify-content: center;
             user-select: none; -webkit-tap-highlight-color: transparent;
-            transition: all 0.1s ease-out;
+            transition: all 0.1s;
         }
-
-        /* Đèn xanh dương chuẩn #4ea0ee */
+        /* Hiệu ứng đèn xanh dương mã #4ea0ee */
         #attack-btn.active-atk {
-            background: rgba(78, 160, 238, 0.7) !important; 
+            background: rgba(78, 160, 238, 0.7) !important;
             border-color: #4ea0ee !important;
-            box-shadow: 0 0 25px #4ea0ee, inset 0 0 10px #4ea0ee;
-            transform: scale(0.9);
+            box-shadow: 0 0 20px #4ea0ee;
+            transform: scale(0.92);
         }
-
-        #pc-hint {
-            position: fixed; top: 15px; left: 15px; color: #4ea0ee; 
-            font-family: sans-serif; background: rgba(0,0,0,0.7); 
-            padding: 10px; border-radius: 8px; z-index: 4000; 
-            border: 1px solid #4ea0ee; pointer-events: none;
-        }
-        @media (max-width: 768px) { #pc-hint { display: none; } }
     </style>
 </head>
 
 <body>
-    <div id="pc-hint"><b>PC MODE</b><br>WASD: Move<br>SPACE: Hold to Shoot</div>
     <div id="joystick-zone"></div>
     <div id="attack-btn">A</div>
 
@@ -75,8 +64,6 @@
     </a-scene>
 
     <script>
-        const root = document.querySelector('#aris-root');
-        const rotWrapper = document.querySelector('#aris-rotation');
         const btn = document.getElementById('attack-btn');
         const models = {
             idle: document.querySelector('#arisIdle'),
@@ -86,11 +73,11 @@
             atkMid: document.querySelector('#arisAtkMid'),
             atkEnd: document.querySelector('#arisAtkEnd')
         };
+        const root = document.querySelector('#aris-root');
+        const rotWrapper = document.querySelector('#aris-rotation');
 
         let moveData = { x: 0, z: 0, active: false };
         let isHolding = false;
-        let midTriggered = false;
-        let keys = {};
 
         function showModel(type) {
             Object.keys(models).forEach(k => {
@@ -98,26 +85,18 @@
             });
         }
 
-        // --- KỸ THUẬT GỐI ĐẦU (ANTI A-POSE) ---
-        setInterval(() => {
-            if (isHolding && models.atkStart.getAttribute('visible') === 'true') {
-                const mixer = models.atkStart.components['animation-mixer']?.mixer;
-                if (mixer) {
-                    const action = mixer._actions[0];
-                    if (action && action.time > (action._clip.duration * 0.9)) {
-                        if (!midTriggered) {
-                            midTriggered = true;
-                            models.atkMid.setAttribute('visible', true);
-                            models.atkMid.removeAttribute('animation-mixer');
-                            models.atkMid.setAttribute('animation-mixer', {clip: '*', loop: 'repeat'});
-                            setTimeout(() => { if(isHolding) models.atkStart.setAttribute('visible', false); }, 50);
-                        }
-                    }
-                }
+        // --- ANIMATION CHAIN ---
+        models.atkStart.addEventListener('animation-finished', () => {
+            if (isHolding) {
+                showModel('atkMid');
+                models.atkMid.removeAttribute('animation-mixer');
+                // Timeout cực ngắn 10ms để trình duyệt kịp render mesh Mid trước khi chạy mixer
+                setTimeout(() => {
+                    models.atkMid.setAttribute('animation-mixer', {clip: '*', loop: 'repeat', timeScale: 1});
+                }, 10);
             }
-        }, 10);
+        });
 
-        // --- EVENTS ---
         models.atkEnd.addEventListener('animation-finished', () => {
             if (!isHolding) {
                 if (moveData.active) showModel('walk');
@@ -129,69 +108,56 @@
             if (!moveData.active && !isHolding) showModel('idle');
         });
 
-        // --- SHARED ACTIONS ---
-        function startAttack() {
-            if (isHolding) return;
-            isHolding = true; midTriggered = false;
+        // --- JOYSTICK ---
+        const manager = nipplejs.create({
+            zone: document.getElementById('joystick-zone'),
+            mode: 'static', position: {left: '75px', bottom: '75px'}, color: 'cyan'
+        });
+
+        manager.on('move', (evt, data) => {
+            moveData.x = data.vector.x; 
+            moveData.z = -data.vector.y;
+            moveData.active = true;
+            if (!isHolding) showModel('walk');
+        });
+
+        manager.on('end', () => {
+            moveData.active = false;
+            if (!isHolding) {
+                showModel('stop');
+                models.stop.removeAttribute('animation-mixer');
+                models.stop.setAttribute('animation-mixer', {clip: '*', loop: 'once', clampWhenFinished: true});
+            }
+        });
+
+        // --- HOLD ATTACK ---
+        btn.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            isHolding = true;
             btn.classList.add('active-atk');
             showModel('atkStart');
             models.atkStart.removeAttribute('animation-mixer');
             models.atkStart.setAttribute('animation-mixer', {clip: '*', loop: 'once', clampWhenFinished: true});
-        }
+        });
 
-        function endAttack() {
-            if (!isHolding) return;
+        btn.addEventListener('touchend', (e) => {
+            e.preventDefault();
             isHolding = false;
             btn.classList.remove('active-atk');
             showModel('atkEnd');
             models.atkEnd.removeAttribute('animation-mixer');
             models.atkEnd.setAttribute('animation-mixer', {clip: '*', loop: 'once', clampWhenFinished: true});
-        }
-
-        // --- MOBILE CONTROLS ---
-        const manager = nipplejs.create({ zone: document.getElementById('joystick-zone'), mode: 'static', position: {left: '75px', bottom: '75px'}, color: 'cyan' });
-        manager.on('move', (evt, data) => { moveData.x = data.vector.x; moveData.z = -data.vector.y; moveData.active = true; if (!isHolding) showModel('walk'); });
-        manager.on('end', () => { moveData.active = false; if (!isHolding) { showModel('stop'); models.stop.removeAttribute('animation-mixer'); models.stop.setAttribute('animation-mixer', {clip: '*', loop: 'once', clampWhenFinished: true}); } });
-        btn.addEventListener('touchstart', (e) => { e.preventDefault(); startAttack(); });
-        btn.addEventListener('touchend', (e) => { e.preventDefault(); endAttack(); });
-
-        // --- PC CONTROLS ---
-        window.addEventListener('keydown', (e) => {
-            if (e.repeat) return;
-            keys[e.code] = true;
-            if (e.code === 'Space') startAttack();
-        });
-        window.addEventListener('keyup', (e) => {
-            keys[e.code] = false;
-            if (e.code === 'Space') endAttack();
         });
 
-        function handlePCMovement() {
-            let x = 0, z = 0;
-            if (keys['KeyW'] || keys['ArrowUp']) z = 1;
-            if (keys['KeyS'] || keys['ArrowDown']) z = -1;
-            if (keys['KeyA'] || keys['ArrowLeft']) x = -1;
-            if (keys['KeyD'] || keys['ArrowRight']) x = 1;
-
-            if ((x !== 0 || z !== 0) && !isHolding) {
-                moveData.x = x; moveData.z = -z;
-                if (!moveData.active) { moveData.active = true; showModel('walk'); }
-            } else if (moveData.active && !isHolding && x === 0 && z === 0) {
-                moveData.active = false;
-                showModel('stop');
-                models.stop.removeAttribute('animation-mixer');
-                models.stop.setAttribute('animation-mixer', {clip: '*', loop: 'once', clampWhenFinished: true});
-            }
-        }
-
-        // --- UPDATE LOOP ---
+        // --- GAME LOOP ---
         function update() {
-            handlePCMovement();
             if (moveData.active && !isHolding) {
-                let pos = root.getAttribute('position');
-                pos.x += moveData.x * 0.05; pos.z += moveData.z * 0.05;
-                root.setAttribute('position', pos);
-                rotWrapper.setAttribute('rotation', `0 ${Math.atan2(moveData.x, moveData.z) * 57.3} 0`);
+                let currPos = root.getAttribute('position');
+                currPos.x += moveData.x * 0.05;
+                currPos.z += moveData.z * 0.05;
+                root.setAttribute('position', currPos);
+                let angleDeg = Math.atan2(moveData.x, moveData.z) * (180 / Math.PI);
+                rotWrapper.setAttribute('rotation', `0 ${angleDeg} 0`);
             }
             requestAnimationFrame(update);
         }
