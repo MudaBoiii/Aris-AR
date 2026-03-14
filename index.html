@@ -2,7 +2,7 @@
 <html>
 <head>
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Aris AR - Classic Hold Final</title>
+    <title>Aris AR - Final Master</title>
     <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
     <script src="https://cdn.jsdelivr.net/gh/donmccurdy/aframe-extras@v7.0.0/dist/aframe-extras.min.js"></script>
@@ -11,22 +11,20 @@
     <style>
         body { margin: 0; overflow: hidden; touch-action: none; background: #000; }
         #joystick-zone { position: fixed; bottom: 30px; left: 30px; width: 150px; height: 150px; z-index: 3000; }
-        
         #attack-btn {
             position: fixed; bottom: 60px; right: 60px; width: 85px; height: 85px;
             background: rgba(255, 255, 255, 0.15); border: 5px solid #fff; border-radius: 50%;
             color: white; font-size: 35px; font-weight: bold; z-index: 3000;
             display: flex; align-items: center; justify-content: center;
             user-select: none; -webkit-tap-highlight-color: transparent;
-            transition: background 0.2s, border-color 0.2s, box-shadow 0.2s;
+            transition: all 0.15s ease;
         }
-
-        /* Mã màu xanh dương yêu cầu: #4ea0ee */
-        #attack-btn.active-blue {
+        /* Hiệu ứng đèn xanh dương #4ea0ee */
+        #attack-btn.active-atk {
             background: rgba(78, 160, 238, 0.6) !important;
             border-color: #4ea0ee !important;
             box-shadow: 0 0 25px #4ea0ee;
-            transform: scale(0.95);
+            transform: scale(0.92);
         }
     </style>
 </head>
@@ -57,7 +55,6 @@
                     <a-gltf-model id="arisIdle" src="#mIdle" scale="0.3 0.3 0.3" visible="true" animation-mixer></a-gltf-model>
                     <a-gltf-model id="arisWalk" src="#mWalk" scale="0.3 0.3 0.3" visible="false" animation-mixer></a-gltf-model>
                     <a-gltf-model id="arisStop" src="#mStop" scale="0.3 0.3 0.3" visible="false"></a-gltf-model>
-                    
                     <a-gltf-model id="arisAtkStart" src="#aStart" scale="0.3 0.3 0.3" visible="false"></a-gltf-model>
                     <a-gltf-model id="arisAtkMid" src="#aMid" scale="0.3 0.3 0.3" visible="false"></a-gltf-model>
                     <a-gltf-model id="arisAtkEnd" src="#aEnd" scale="0.3 0.3 0.3" visible="false"></a-gltf-model>
@@ -85,20 +82,14 @@
         function showModel(type) {
             Object.keys(models).forEach(k => {
                 models[k].setAttribute('visible', k === type);
-                // Dừng mixer của các model không hiển thị để tiết kiệm tài nguyên
-                if (k !== type && models[k].hasAttribute('animation-mixer')) {
-                    // Tránh dừng idle/walk vì chúng cần chạy liên tục khi hiện
-                    if (k.startsWith('atk') || k === 'stop') {
-                         models[k].removeAttribute('animation-mixer');
-                    }
-                }
             });
         }
 
-        // --- TRANSITION LOGIC ---
+        // --- HỆ THỐNG SỰ KIỆN ---
         models.atkStart.addEventListener('animation-finished', () => {
             if (isHolding) {
                 showModel('atkMid');
+                models.atkMid.removeAttribute('animation-mixer');
                 models.atkMid.setAttribute('animation-mixer', {clip: '*', loop: 'repeat'});
             }
         });
@@ -114,7 +105,7 @@
             if (!moveData.active && !isHolding) showModel('idle');
         });
 
-        // --- JOYSTICK ---
+        // --- ĐIỀU KHIỂN JOYSTICK ---
         const manager = nipplejs.create({
             zone: document.getElementById('joystick-zone'),
             mode: 'static', position: {left: '75px', bottom: '75px'}, color: 'cyan'
@@ -131,18 +122,20 @@
             moveData.active = false;
             if (!isHolding) {
                 showModel('stop');
+                models.stop.removeAttribute('animation-mixer');
                 models.stop.setAttribute('animation-mixer', {clip: '*', loop: 'once', clampWhenFinished: true});
             }
         });
 
-        // --- HOLD ATTACK (TOUCHSTART / TOUCHEND) ---
+        // --- NHẤN GIỮ NÚT A ---
         btn.addEventListener('touchstart', (e) => {
             e.preventDefault();
             if (isHolding) return;
             isHolding = true;
-            btn.classList.add('active-blue');
+            btn.classList.add('active-atk');
             
             showModel('atkStart');
+            models.atkStart.removeAttribute('animation-mixer');
             models.atkStart.setAttribute('animation-mixer', {clip: '*', loop: 'once', clampWhenFinished: true});
         });
 
@@ -150,14 +143,14 @@
             e.preventDefault();
             if (!isHolding) return;
             isHolding = false;
-            btn.classList.remove('active-blue');
+            btn.classList.remove('active-atk');
             
-            // Chuyển sang End và đảm bảo Mixer của Mid đã bị dọn dẹp
             showModel('atkEnd');
+            models.atkEnd.removeAttribute('animation-mixer');
             models.atkEnd.setAttribute('animation-mixer', {clip: '*', loop: 'once', clampWhenFinished: true});
         });
 
-        // --- UPDATE LOOP ---
+        // --- VÒNG LẶP CẬP NHẬT ---
         function update() {
             if (moveData.active && !isHolding) {
                 let currPos = root.getAttribute('position');
