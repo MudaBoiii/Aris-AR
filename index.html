@@ -2,7 +2,7 @@
 <html>
 <head>
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Aris AR - New Axis System</title>
+    <title>Aris AR - Final Axis Fix</title>
     <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
     <script src="https://cdn.jsdelivr.net/gh/donmccurdy/aframe-extras@v7.0.0/dist/aframe-extras.min.js"></script>
@@ -36,8 +36,7 @@
         <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
 
         <a-entity mindar-image-target="targetIndex: 0">
-            <a-entity id="aris-root" position="0 0 0.01">
-                
+            <a-entity id="aris-root" position="0 0 0.05">
                 <a-entity id="aris-rotation" rotation="0 0 0">
                     
                     <a-gltf-model id="arisIdle" src="#mIdle" rotation="0 0 0" scale="0.3 0.3 0.3" visible="true" animation-mixer></a-gltf-model>
@@ -60,9 +59,8 @@
             stop: document.querySelector('#arisStop') 
         };
         
-        // Chuyển sang hệ tọa độ 3D chuẩn: X (ngang), Y (lên trời), Z (xa/gần)
-        let pos = { x: 0, y: 0, z: 0.01 }; 
-        let moveData = { x: 0, z: 0, active: false, angle: 0 };
+        let pos = { x: 0, y: 0, z: 0.05 }; 
+        let moveData = { x: 0, y: 0, active: false, angle: 0 };
         const moveSpeed = 0.05; 
         let stopTimeout;
 
@@ -81,12 +79,13 @@
             clearTimeout(stopTimeout);
             moveData.active = true;
             
-            // X là di chuyển ngang
+            // Đảo trục để di chuyển không bị ngược
+            // Trong hệ MindAR rotation 0: X là ngang, Y là tiến/lùi
             moveData.x = Math.cos(data.angle.radian);
-            // Z âm là đi ra xa (đẩy joystick lên)
-            moveData.z = -Math.sin(data.angle.radian);
+            moveData.y = Math.sin(data.angle.radian);
             
-            // Xoay quanh trục Y. NippleJS 90 độ là tiến, ta trừ 90 để khớp hướng 0 của model.
+            // Fix góc xoay mặt: 
+            // data.angle.degree: 0 là phải, 90 là lên, 180 là trái, 270 là xuống
             moveData.angle = data.angle.degree - 90; 
             
             showModel('walk');
@@ -102,15 +101,14 @@
 
         function update() {
             if (moveData.active) {
-                // Di chuyển trên mặt phẳng sàn (X và Z)
+                // Di chuyển trên mặt phẳng XY của ảnh
                 pos.x += moveData.x * moveSpeed;
-                pos.z += moveData.z * moveSpeed;
+                pos.y += moveData.y * moveSpeed;
                 
                 root.setAttribute('position', `${pos.x} ${pos.y} ${pos.z}`);
                 
-                // Xoay mặt Aris (Xoay quanh trục đứng Y)
-                // Cần dùng dấu âm (-) vì hệ trục xoay của A-Frame ngược chiều với Joystick
-                rotWrapper.setAttribute('rotation', `0 ${-moveData.angle} 0`);
+                // Xoay mặt quanh trục Z (vì khi model rotation 0, mặt phẳng đứng là XY)
+                rotWrapper.setAttribute('rotation', `0 0 ${moveData.angle}`);
             }
             requestAnimationFrame(update);
         }
