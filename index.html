@@ -2,46 +2,36 @@
 <html>
 <head>
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Aris AR Pro - No Marker - Fast Speed</title>
-    <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
+    <title>Aris AR Pro - Fixed Camera</title>
+    <script src="https://aframe.io/releases/1.3.0/aframe.min.js"></script>
+    <script src="https://raw.githack.com/AR-js-org/AR.js/master/aframe/build/aframe-ar.js"></script>
     <script src="https://cdn.jsdelivr.net/gh/donmccurdy/aframe-extras@v7.0.0/dist/aframe-extras.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/nipplejs/0.10.1/nipplejs.min.js"></script>
 
     <style>
-        body { margin: 0; overflow: hidden; background-color: #000; font-family: sans-serif; }
+        body { margin: 0; overflow: hidden; }
         #joystick-zone { 
-            position: fixed; 
-            bottom: 40px; 
-            left: 40px; 
-            width: 150px; 
-            height: 150px; 
-            z-index: 1000; 
+            position: fixed; bottom: 40px; left: 40px; 
+            width: 150px; height: 150px; z-index: 2000; 
         }
         #reset-btn {
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            padding: 12px 24px;
-            background: rgba(0, 255, 255, 0.2);
-            color: #00ffff;
-            border: 2px solid #00ffff;
-            border-radius: 10px;
-            font-weight: bold;
-            z-index: 1000;
-            cursor: pointer;
+            position: fixed; top: 20px; right: 20px;
+            padding: 12px 24px; background: rgba(0, 0, 0, 0.5);
+            color: #00ffff; border: 2px solid #00ffff;
+            border-radius: 10px; z-index: 2000;
         }
     </style>
 </head>
 
-<body>
+<body style="margin: 0; overflow: hidden;">
     <button id="reset-btn">TRIỆU HỒI ARIS</button>
     <div id="joystick-zone"></div>
 
     <a-scene 
         embedded 
-        arjs="sourceType: webcam; debugUIEnabled: false;" 
+        arjs="sourceType: webcam; debugUIEnabled: false; trackingMethod: best;" 
         vr-mode-ui="enabled: false"
-        renderer="antialias: false; logarithmicDepthBuffer: true; colorManagement: true;">
+        renderer="logarithmicDepthBuffer: true; colorManagement: true;">
 
         <a-assets>
             <a-asset-item id="mIdle" src="Walk_Idle.glb"></a-asset-item>
@@ -52,40 +42,26 @@
         <a-camera id="cam" look-controls="enabled: true" wasd-controls-enabled="false"></a-camera>
 
         <a-entity id="aris-root" position="0 -1.5 -3"> 
-            
             <a-entity id="aris-rotation" rotation="0 0 0">
-                
-                <a-gltf-model id="arisIdle" src="#mIdle" scale="0.5 0.5 0.5" visible="true" 
-                    animation-mixer="clip: *; loop: repeat"></a-gltf-model>
-                
-                <a-gltf-model id="arisWalk" src="#mWalk" scale="0.5 0.5 0.5" visible="false" 
-                    animation-mixer="clip: *; loop: repeat; timeScale: 1.5"></a-gltf-model>
-                
-                <a-gltf-model id="arisStop" src="#mStop" scale="0.5 0.5 0.5" visible="false" 
-                    animation-mixer="clip: *; loop: once; clampWhenFinished: true"></a-gltf-model>
-            
+                <a-gltf-model id="arisIdle" src="#mIdle" scale="0.5 0.5 0.5" visible="true" animation-mixer></a-gltf-model>
+                <a-gltf-model id="arisWalk" src="#mWalk" scale="0.5 0.5 0.5" visible="false" animation-mixer="timeScale: 1.5"></a-gltf-model>
+                <a-gltf-model id="arisStop" src="#mStop" scale="0.5 0.5 0.5" visible="false" animation-mixer="loop: once; clampWhenFinished: true"></a-gltf-model>
             </a-entity>
         </a-entity>
 
         <a-light type="ambient" intensity="1.5"></a-light>
-        <a-light type="directional" position="1 2 1" intensity="1"></a-light>
     </a-scene>
 
     <script>
         const root = document.querySelector('#aris-root');
         const rotWrapper = document.querySelector('#aris-rotation');
-        const models = { 
-            idle: document.querySelector('#arisIdle'), 
-            walk: document.querySelector('#arisWalk'), 
-            stop: document.querySelector('#arisStop') 
-        };
+        const models = { idle: document.querySelector('#arisIdle'), walk: document.querySelector('#arisWalk'), stop: document.querySelector('#arisStop') };
         
         let pos = { x: 0, y: -1.5, z: -3 }; 
         let moveData = { x: 0, z: 0, active: false, angle: 0 };
-        const moveSpeed = 0.06; // Đã tăng tốc độ di chuyển
+        const moveSpeed = 0.06;
         let stopTimeout;
 
-        // Cấu hình Joystick
         const manager = nipplejs.create({
             zone: document.getElementById('joystick-zone'),
             mode: 'static',
@@ -94,49 +70,36 @@
         });
 
         function showModel(type) {
-            Object.keys(models).forEach(k => {
-                models[k].setAttribute('visible', k === type);
-            });
+            Object.keys(models).forEach(k => { models[k].setAttribute('visible', k === type); });
         }
 
         manager.on('move', (evt, data) => {
             clearTimeout(stopTimeout);
             moveData.active = true;
-            
-            // Tính hướng dựa trên Joystick
             moveData.x = Math.cos(data.angle.radian);
             moveData.z = -Math.sin(data.angle.radian);
             moveData.angle = data.angle.degree - 90;
-            
             showModel('walk');
         });
 
         manager.on('end', () => {
             moveData.active = false;
             showModel('stop');
-            
-            // Reset animation Stop
             models.stop.removeAttribute('animation-mixer');
-            models.stop.setAttribute('animation-mixer', 'clip: *; loop: once; clampWhenFinished: true');
-
-            stopTimeout = setTimeout(() => {
-                if (!moveData.active) showModel('idle');
-            }, 800);
+            models.stop.setAttribute('animation-mixer', 'loop: once; clampWhenFinished: true');
+            stopTimeout = setTimeout(() => { if (!moveData.active) showModel('idle'); }, 800);
         });
 
-        // Nút Triệu hồi Aris về trước mặt
         document.getElementById('reset-btn').addEventListener('click', () => {
             pos = { x: 0, y: -1.5, z: -3 };
             root.setAttribute('position', "0 -1.5 -3");
             rotWrapper.setAttribute('rotation', "0 0 0");
         });
 
-        // Vòng lặp cập nhật khung hình
         function update() {
             if (moveData.active) {
                 pos.x += moveData.x * moveSpeed;
                 pos.z += moveData.z * moveSpeed;
-                
                 root.setAttribute('position', `${pos.x} ${pos.y} ${pos.z}`);
                 rotWrapper.setAttribute('rotation', `0 ${-moveData.angle} 0`);
             }
