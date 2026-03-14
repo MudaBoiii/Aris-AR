@@ -2,7 +2,7 @@
 <html>
 <head>
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Aris AR - Correct Movement Direction</title>
+    <title>Aris AR - Final Version</title>
     <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
     <script src="https://cdn.jsdelivr.net/gh/donmccurdy/aframe-extras@v7.0.0/dist/aframe-extras.min.js"></script>
@@ -40,7 +40,7 @@
                 <a-entity id="aris-rotation" rotation="0 0 0">
                     
                     <a-gltf-model id="arisIdle" src="#mIdle" rotation="90 0 0" scale="0.5 0.5 0.5" visible="true" animation-mixer></a-gltf-model>
-                    <a-gltf-model id="arisWalk" src="#mWalk" rotation="90 0 0" scale="0.5 0.5 0.5" visible="false" animation-mixer="timeScale: 1.5"></a-gltf-model>
+                    <a-gltf-model id="arisWalk" src="#mWalk" rotation="90 0 0" scale="0.5 0.5 0.5" visible="false" animation-mixer="timeScale: 1.2"></a-gltf-model>
                     <a-gltf-model id="arisStop" src="#mStop" rotation="90 0 0" scale="0.5 0.5 0.5" visible="false" animation-mixer="loop: once; clampWhenFinished: true"></a-gltf-model>
                 
                 </a-entity>
@@ -61,7 +61,7 @@
         
         let pos = { x: 0, y: 0 }; 
         let moveData = { x: 0, y: 0, active: false, angle: 0 };
-        const moveSpeed = 0.06; 
+        const moveSpeed = 0.05; // Đã chỉnh theo yêu cầu của bạn
         let stopTimeout;
 
         const manager = nipplejs.create({
@@ -79,15 +79,13 @@
             clearTimeout(stopTimeout);
             moveData.active = true;
             
-            // LẤY HƯỚNG TỪ JOYSTICK
+            // Đọc hướng di chuyển từ Joystick
             moveData.x = Math.cos(data.angle.radian);
             moveData.y = Math.sin(data.angle.radian);
             
-            // FIX HƯỚNG XOAY: 
-            // Marker AR nằm trên mặt phẳng XY, nên ta xoay quanh trục Z.
-            // data.angle.degree: 90 là hướng lên (Tiến).
-            // Ta trừ 90 để hướng 90 độ của Joystick khớp với hướng 0 độ của Model.
-            moveData.angle = data.angle.degree - 90;
+            // Fix hướng nhìn: 
+            // Joystick 90 độ là hướng lên. Cộng 180 để khớp với hướng quay mặt của Aris trong video
+            moveData.angle = data.angle.degree + 180; 
             
             showModel('walk');
         });
@@ -95,22 +93,25 @@
         manager.on('end', () => {
             moveData.active = false;
             showModel('stop');
+            
+            // Reset anim stop để không bị khựng
             models.stop.removeAttribute('animation-mixer');
             models.stop.setAttribute('animation-mixer', 'loop: once; clampWhenFinished: true');
-            stopTimeout = setTimeout(() => { if (!moveData.active) showModel('idle'); }, 800);
+
+            stopTimeout = setTimeout(() => { 
+                if (!moveData.active) showModel('idle'); 
+            }, 800);
         });
 
         function update() {
             if (moveData.active) {
-                // Di chuyển: x là ngang, y là xa/gần màn hình
+                // Cập nhật vị trí X, Y
                 pos.x += moveData.x * moveSpeed;
                 pos.y += moveData.y * moveSpeed;
                 
                 root.setAttribute('position', `${pos.x} ${pos.y} 0`);
                 
-                // XOAY: Vì model đang rotation 90 0 0 (đứng trên mặt phẳng XY), 
-                // nên hướng nhìn của nó sẽ được điều khiển bằng trục Z của Wrapper.
-                // Nếu Aris nhìn lệch 90 độ, hãy thử đổi thành moveData.angle + 90 hoặc 180.
+                // Cập nhật hướng xoay mặt (xoay quanh trục Z của wrapper)
                 rotWrapper.setAttribute('rotation', `0 0 ${moveData.angle}`);
             }
             requestAnimationFrame(update);
