@@ -2,7 +2,7 @@
 <html>
 <head>
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Aris AR - Mobile Final Clean</title>
+    <title>Aris AR - No A-Pose Final</title>
     <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
     <script src="https://cdn.jsdelivr.net/gh/donmccurdy/aframe-extras@v7.0.0/dist/aframe-extras.min.js"></script>
@@ -19,12 +19,11 @@
             user-select: none; -webkit-tap-highlight-color: transparent;
             transition: all 0.1s;
         }
-        /* Hiệu ứng đèn xanh dương mã #4ea0ee */
         #attack-btn.active-atk {
             background: rgba(78, 160, 238, 0.7) !important;
             border-color: #4ea0ee !important;
             box-shadow: 0 0 20px #4ea0ee;
-            transform: scale(0.92);
+            transform: scale(0.9);
         }
     </style>
 </head>
@@ -52,12 +51,12 @@
         <a-entity mindar-image-target="targetIndex: 0">
             <a-entity id="aris-root" position="0 -0.8 0.01">
                 <a-entity id="aris-rotation">
-                    <a-gltf-model id="arisIdle" src="#mIdle" scale="0.3 0.3 0.3" visible="true" animation-mixer></a-gltf-model>
-                    <a-gltf-model id="arisWalk" src="#mWalk" scale="0.3 0.3 0.3" visible="false" animation-mixer></a-gltf-model>
-                    <a-gltf-model id="arisStop" src="#mStop" scale="0.3 0.3 0.3" visible="false"></a-gltf-model>
-                    <a-gltf-model id="arisAtkStart" src="#aStart" scale="0.3 0.3 0.3" visible="false"></a-gltf-model>
-                    <a-gltf-model id="arisAtkMid" src="#aMid" scale="0.3 0.3 0.3" visible="false"></a-gltf-model>
-                    <a-gltf-model id="arisAtkEnd" src="#aEnd" scale="0.3 0.3 0.3" visible="false"></a-gltf-model>
+                    <a-gltf-model id="arisIdle" src="#mIdle" scale="0.3 0.3 0.3" animation-mixer></a-gltf-model>
+                    <a-gltf-model id="arisWalk" src="#mWalk" scale="0 0 0" animation-mixer></a-gltf-model>
+                    <a-gltf-model id="arisStop" src="#mStop" scale="0 0 0"></a-gltf-model>
+                    <a-gltf-model id="arisAtkStart" src="#aStart" scale="0 0 0"></a-gltf-model>
+                    <a-gltf-model id="arisAtkMid" src="#aMid" scale="0 0 0"></a-gltf-model>
+                    <a-gltf-model id="arisAtkEnd" src="#aEnd" scale="0 0 0"></a-gltf-model>
                 </a-entity>
             </a-entity>
         </a-entity>
@@ -76,36 +75,34 @@
         const root = document.querySelector('#aris-root');
         const rotWrapper = document.querySelector('#aris-rotation');
 
-        let moveData = { x: 0, z: 0, active: false };
         let isHolding = false;
+        let moveData = { x: 0, z: 0, active: false };
 
-        function showModel(type) {
+        // Hàm đổi model bằng Scale để giữ xương (Skeleton) trong bộ nhớ
+        function setModel(type) {
             Object.keys(models).forEach(k => {
-                models[k].setAttribute('visible', k === type);
+                models[k].setAttribute('scale', k === type ? '0.3 0.3 0.3' : '0 0 0');
             });
         }
 
-        // --- ANIMATION CHAIN ---
+        // --- CHUỖI SỰ KIỆN ---
         models.atkStart.addEventListener('animation-finished', () => {
             if (isHolding) {
-                showModel('atkMid');
+                setModel('atkMid');
                 models.atkMid.removeAttribute('animation-mixer');
-                // Timeout cực ngắn 10ms để trình duyệt kịp render mesh Mid trước khi chạy mixer
-                setTimeout(() => {
-                    models.atkMid.setAttribute('animation-mixer', {clip: '*', loop: 'repeat', timeScale: 1});
-                }, 10);
+                models.atkMid.setAttribute('animation-mixer', {clip: '*', loop: 'repeat'});
             }
         });
 
         models.atkEnd.addEventListener('animation-finished', () => {
             if (!isHolding) {
-                if (moveData.active) showModel('walk');
-                else showModel('idle');
+                if (moveData.active) setModel('walk');
+                else setModel('idle');
             }
         });
 
         models.stop.addEventListener('animation-finished', () => {
-            if (!moveData.active && !isHolding) showModel('idle');
+            if (!moveData.active && !isHolding) setModel('idle');
         });
 
         // --- JOYSTICK ---
@@ -118,24 +115,24 @@
             moveData.x = data.vector.x; 
             moveData.z = -data.vector.y;
             moveData.active = true;
-            if (!isHolding) showModel('walk');
+            if (!isHolding) setModel('walk');
         });
 
         manager.on('end', () => {
             moveData.active = false;
             if (!isHolding) {
-                showModel('stop');
+                setModel('stop');
                 models.stop.removeAttribute('animation-mixer');
                 models.stop.setAttribute('animation-mixer', {clip: '*', loop: 'once', clampWhenFinished: true});
             }
         });
 
-        // --- HOLD ATTACK ---
+        // --- NÚT TẤN CÔNG ---
         btn.addEventListener('touchstart', (e) => {
             e.preventDefault();
             isHolding = true;
             btn.classList.add('active-atk');
-            showModel('atkStart');
+            setModel('atkStart');
             models.atkStart.removeAttribute('animation-mixer');
             models.atkStart.setAttribute('animation-mixer', {clip: '*', loop: 'once', clampWhenFinished: true});
         });
@@ -144,18 +141,18 @@
             e.preventDefault();
             isHolding = false;
             btn.classList.remove('active-atk');
-            showModel('atkEnd');
+            setModel('atkEnd');
             models.atkEnd.removeAttribute('animation-mixer');
             models.atkEnd.setAttribute('animation-mixer', {clip: '*', loop: 'once', clampWhenFinished: true});
         });
 
-        // --- GAME LOOP ---
+        // --- CẬP NHẬT TỌA ĐỘ ---
         function update() {
             if (moveData.active && !isHolding) {
-                let currPos = root.getAttribute('position');
-                currPos.x += moveData.x * 0.05;
-                currPos.z += moveData.z * 0.05;
-                root.setAttribute('position', currPos);
+                let pos = root.getAttribute('position');
+                pos.x += moveData.x * 0.05;
+                pos.z += moveData.z * 0.05;
+                root.setAttribute('position', pos);
                 let angleDeg = Math.atan2(moveData.x, moveData.z) * (180 / Math.PI);
                 rotWrapper.setAttribute('rotation', `0 ${angleDeg} 0`);
             }
