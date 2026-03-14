@@ -2,7 +2,7 @@
 <html>
 <head>
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Aris AR - Final Master</title>
+    <title>Aris AR - Classic Style</title>
     <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
     <script src="https://cdn.jsdelivr.net/gh/donmccurdy/aframe-extras@v7.0.0/dist/aframe-extras.min.js"></script>
@@ -17,14 +17,13 @@
             color: white; font-size: 35px; font-weight: bold; z-index: 3000;
             display: flex; align-items: center; justify-content: center;
             user-select: none; -webkit-tap-highlight-color: transparent;
-            transition: all 0.15s ease;
+            transition: all 0.2s;
         }
-        /* Hiệu ứng đèn xanh dương #4ea0ee */
+        /* Đèn xanh dương theo yêu cầu */
         #attack-btn.active-atk {
-            background: rgba(78, 160, 238, 0.6) !important;
+            background: rgba(78, 160, 238, 0.7) !important;
             border-color: #4ea0ee !important;
             box-shadow: 0 0 25px #4ea0ee;
-            transform: scale(0.92);
         }
     </style>
 </head>
@@ -33,10 +32,7 @@
     <div id="joystick-zone"></div>
     <div id="attack-btn">A</div>
 
-    <a-scene 
-        mindar-image="imageTargetSrc: targets.mind; missTolerance: 10000; stayVisible: true;" 
-        renderer="colorManagement: true; antialias: true;" vr-mode-ui="enabled: false">
-
+    <a-scene mindar-image="imageTargetSrc: targets.mind; stayVisible: true;" renderer="colorManagement: true;">
         <a-assets>
             <a-asset-item id="mIdle" src="Movement/Walk_Idle.glb"></a-asset-item>
             <a-asset-item id="mWalk" src="Movement/Walk.glb"></a-asset-item>
@@ -47,8 +43,6 @@
         </a-assets>
 
         <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
-        <a-light type="ambient" intensity="1.2"></a-light>
-
         <a-entity mindar-image-target="targetIndex: 0">
             <a-entity id="aris-root" position="0 -0.8 0.01">
                 <a-entity id="aris-rotation">
@@ -61,11 +55,10 @@
                 </a-entity>
             </a-entity>
         </a-entity>
+        <a-light type="ambient" intensity="1.2"></a-light>
     </a-scene>
 
     <script>
-        const root = document.querySelector('#aris-root');
-        const rotWrapper = document.querySelector('#aris-rotation');
         const btn = document.getElementById('attack-btn');
         const models = {
             idle: document.querySelector('#arisIdle'),
@@ -85,11 +78,10 @@
             });
         }
 
-        // --- HỆ THỐNG SỰ KIỆN ---
+        // Logic chuyển tiếp mượt như bản cũ
         models.atkStart.addEventListener('animation-finished', () => {
             if (isHolding) {
                 showModel('atkMid');
-                models.atkMid.removeAttribute('animation-mixer');
                 models.atkMid.setAttribute('animation-mixer', {clip: '*', loop: 'repeat'});
             }
         });
@@ -105,61 +97,46 @@
             if (!moveData.active && !isHolding) showModel('idle');
         });
 
-        // --- ĐIỀU KHIỂN JOYSTICK ---
-        const manager = nipplejs.create({
-            zone: document.getElementById('joystick-zone'),
-            mode: 'static', position: {left: '75px', bottom: '75px'}, color: 'cyan'
-        });
-
+        // Joystick
+        const manager = nipplejs.create({ zone: document.getElementById('joystick-zone'), mode: 'static', position: {left: '75px', bottom: '75px'}, color: 'cyan' });
         manager.on('move', (evt, data) => {
-            moveData.x = data.vector.x; 
-            moveData.z = -data.vector.y;
-            moveData.active = true;
+            moveData.x = data.vector.x; moveData.z = -data.vector.y; moveData.active = true;
             if (!isHolding) showModel('walk');
         });
-
         manager.on('end', () => {
             moveData.active = false;
             if (!isHolding) {
                 showModel('stop');
-                models.stop.removeAttribute('animation-mixer');
                 models.stop.setAttribute('animation-mixer', {clip: '*', loop: 'once', clampWhenFinished: true});
             }
         });
 
-        // --- NHẤN GIỮ NÚT A ---
+        // Nút A - Giữ để bắn (Classic Style)
         btn.addEventListener('touchstart', (e) => {
             e.preventDefault();
-            if (isHolding) return;
             isHolding = true;
             btn.classList.add('active-atk');
-            
             showModel('atkStart');
-            models.atkStart.removeAttribute('animation-mixer');
             models.atkStart.setAttribute('animation-mixer', {clip: '*', loop: 'once', clampWhenFinished: true});
         });
 
         btn.addEventListener('touchend', (e) => {
             e.preventDefault();
-            if (!isHolding) return;
             isHolding = false;
             btn.classList.remove('active-atk');
-            
             showModel('atkEnd');
-            models.atkEnd.removeAttribute('animation-mixer');
             models.atkEnd.setAttribute('animation-mixer', {clip: '*', loop: 'once', clampWhenFinished: true});
         });
 
-        // --- VÒNG LẶP CẬP NHẬT ---
+        // Di chuyển
+        const root = document.querySelector('#aris-root');
+        const rotWrapper = document.querySelector('#aris-rotation');
         function update() {
             if (moveData.active && !isHolding) {
-                let currPos = root.getAttribute('position');
-                currPos.x += moveData.x * 0.05;
-                currPos.z += moveData.z * 0.05;
-                root.setAttribute('position', currPos);
-                
-                let angleDeg = Math.atan2(moveData.x, moveData.z) * (180 / Math.PI);
-                rotWrapper.setAttribute('rotation', `0 ${angleDeg} 0`);
+                let pos = root.getAttribute('position');
+                pos.x += moveData.x * 0.05; pos.z += moveData.z * 0.05;
+                root.setAttribute('position', pos);
+                rotWrapper.setAttribute('rotation', `0 ${Math.atan2(moveData.x, moveData.z) * 57.3} 0`);
             }
             requestAnimationFrame(update);
         }
