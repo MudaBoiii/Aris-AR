@@ -2,7 +2,7 @@
 <html>
 <head>
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Aris AR - Optimized</title>
+    <title>Aris AR - Final Fixed 90</title>
     <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
     <script src="https://cdn.jsdelivr.net/gh/donmccurdy/aframe-extras@v7.0.0/dist/aframe-extras.min.js"></script>
@@ -38,11 +38,9 @@
         <a-entity mindar-image-target="targetIndex: 0">
             <a-entity id="aris-root" position="0 0 0">
                 <a-entity id="aris-rotation" rotation="0 0 0">
-                    
                     <a-gltf-model id="arisIdle" src="#mIdle" rotation="90 0 0" scale="0.5 0.5 0.5" visible="true" animation-mixer></a-gltf-model>
                     <a-gltf-model id="arisWalk" src="#mWalk" rotation="90 0 0" scale="0.5 0.5 0.5" visible="false" animation-mixer="timeScale: 1.2"></a-gltf-model>
                     <a-gltf-model id="arisStop" src="#mStop" rotation="90 0 0" scale="0.5 0.5 0.5" visible="false" animation-mixer="loop: once; clampWhenFinished: true"></a-gltf-model>
-                
                 </a-entity>
             </a-entity>
         </a-entity>
@@ -64,7 +62,6 @@
         const moveSpeed = 0.05; 
         let stopTimeout;
 
-        // Khởi tạo Joystick tại góc dưới bên trái
         const manager = nipplejs.create({
             zone: document.getElementById('joystick-zone'),
             mode: 'static',
@@ -79,13 +76,11 @@
         manager.on('move', (evt, data) => {
             clearTimeout(stopTimeout);
             moveData.active = true;
-            
-            // X-Y Coordinate mapping
             moveData.x = Math.cos(data.angle.radian);
             moveData.y = Math.sin(data.angle.radian);
             
-            // Bù 270 độ để sửa lỗi lệch hướng nhìn 90 độ
-            moveData.angle = data.angle.degree + 270; 
+            // ĐÃ CHỈNH: Đổi từ +270 về +90
+            moveData.angle = data.angle.degree + 90; 
             
             showModel('walk');
         });
@@ -93,8 +88,6 @@
         manager.on('end', () => {
             moveData.active = false;
             showModel('stop');
-            
-            // Làm mới animation Stop để chạy mượt từ frame 0
             models.stop.removeAttribute('animation-mixer');
             models.stop.setAttribute('animation-mixer', 'loop: once; clampWhenFinished: true');
 
@@ -105,13 +98,9 @@
 
         function update() {
             if (moveData.active) {
-                // Di chuyển nhân vật
                 pos.x += moveData.x * moveSpeed;
                 pos.y += moveData.y * moveSpeed;
-                
                 root.setAttribute('position', `${pos.x} ${pos.y} 0`);
-                
-                // Xoay nhân vật theo hướng joystick (Z-axis rotation)
                 rotWrapper.setAttribute('rotation', `0 0 ${moveData.angle}`);
             }
             requestAnimationFrame(update);
