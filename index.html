@@ -2,7 +2,7 @@
 <html>
 <head>
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Aris AR - Camera Axis System</title>
+    <title>Aris AR - Corrected Camera Axis</title>
     <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
     <script src="https://cdn.jsdelivr.net/gh/donmccurdy/aframe-extras@v7.0.0/dist/aframe-extras.min.js"></script>
@@ -37,7 +37,6 @@
 
         <a-entity mindar-image-target="targetIndex: 0">
             <a-entity id="aris-root" position="0 -0.5 0.01">
-                
                 <a-entity id="aris-rotation" rotation="0 0 0">
                     
                     <a-gltf-model id="arisIdle" src="#mIdle" rotation="0 0 0" scale="0.3 0.3 0.3" visible="true" animation-mixer></a-gltf-model>
@@ -60,9 +59,8 @@
             stop: document.querySelector('#arisStop') 
         };
         
-        // Tọa độ khởi tạo: y=-0.5 (hạ thấp), z=0.01 (sát ảnh)
         let pos = { x: 0, y: -0.5, z: 0.01 }; 
-        let moveData = { x: 0, y: 0, active: false, angle: 0 };
+        let moveData = { x: 0, z: 0, active: false, angle: 0 };
         const moveSpeed = 0.05; 
         let stopTimeout;
 
@@ -81,13 +79,12 @@
             clearTimeout(stopTimeout);
             moveData.active = true;
             
-            // MAP TRỤC THEO YÊU CẦU:
-            // Joystick ngang (cos) -> Di chuyển X (trái/phải camera)
+            // ĐẢO TRỤC:
+            // Thêm dấu trừ (-) để kéo xuống là đi vào trong, đẩy lên là đi ra ngoài camera
             moveData.x = Math.cos(data.angle.radian);
-            // Joystick dọc (sin) -> Di chuyển Z (đâm vào/ra xa camera)
-            moveData.z = Math.sin(data.angle.radian);
+            moveData.z = -Math.sin(data.angle.radian); 
             
-            // Xoay mặt Aris (Xoay quanh trục đứng Y)
+            // Cập nhật lại góc xoay để mặt nhìn đúng hướng sau khi đảo trục
             moveData.angle = data.angle.degree - 90; 
             
             showModel('walk');
@@ -103,15 +100,14 @@
 
         function update() {
             if (moveData.active) {
-                // DI CHUYỂN:
+                // Di chuyển
                 pos.x += moveData.x * moveSpeed;
-                // Trục Z trong MindAR là hướng đâm ra khỏi ảnh
-                // Đẩy joystick lên (sin dương) -> Aris đi ra xa ảnh (Z tăng)
                 pos.z += moveData.z * moveSpeed;
                 
                 root.setAttribute('position', `${pos.x} ${pos.y} ${pos.z}`);
                 
-                // XOAY: Xoay quanh trục Y (trục đứng)
+                // Xoay mặt Aris quanh trục đứng Y
+                // Dùng -moveData.angle vì hệ tọa độ xoay của A-Frame ngược chiều Joystick
                 rotWrapper.setAttribute('rotation', `0 ${-moveData.angle} 0`);
             }
             requestAnimationFrame(update);
