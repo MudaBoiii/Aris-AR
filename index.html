@@ -2,47 +2,65 @@
 <html>
 <head>
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Aris AR - Classic Style</title>
+    <title>Aris AR - Final Combat System</title>
     <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
     <script src="https://cdn.jsdelivr.net/gh/donmccurdy/aframe-extras@v7.0.0/dist/aframe-extras.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/nipplejs/0.10.1/nipplejs.min.js"></script>
 
     <style>
-        body { margin: 0; overflow: hidden; }
+        body { margin: 0; overflow: hidden; touch-action: none; }
         #joystick-zone { 
             position: fixed; bottom: 40px; left: 40px; 
             width: 150px; height: 150px; z-index: 2000; 
         }
+        #attack-btn {
+            position: fixed; bottom: 60px; right: 60px;
+            width: 80px; height: 80px;
+            background: rgba(255, 255, 255, 0.2);
+            border: 4px solid #fff;
+            border-radius: 50%;
+            color: white; font-size: 32px; font-weight: bold;
+            z-index: 2000; display: flex;
+            align-items: center; justify-content: center;
+            user-select: none; -webkit-tap-highlight-color: transparent;
+            box-shadow: 0 0 15px rgba(0,0,0,0.3);
+        }
+        #attack-btn:active { background: rgba(255, 255, 255, 0.5); transform: scale(0.85); }
     </style>
 </head>
 
 <body>
     <div id="joystick-zone"></div>
+    <div id="attack-btn">A</div>
 
     <a-scene 
-        mindar-image="imageTargetSrc: targets.mind; filterMinCF: 0.0001; filterBeta: 0.001; missTolerance: 10000;" 
-        color-space="sRGB" 
-        renderer="colorManagement: true; antialias: true;" 
-        vr-mode-ui="enabled: false" 
-        device-orientation-permission-ui="enabled: false">
+        mindar-image="imageTargetSrc: targets.mind; filterMinCF: 0.0001; filterBeta: 0.001;" 
+        color-space="sRGB" renderer="colorManagement: true; antialias: true;" 
+        vr-mode-ui="enabled: false" device-orientation-permission-ui="enabled: false">
 
         <a-assets>
-            <a-asset-item id="mIdle" src="Walk_Idle.glb"></a-asset-item>
-            <a-asset-item id="mWalk" src="Walk.glb"></a-asset-item>
-            <a-asset-item id="mStop" src="Walk_Stop.glb"></a-asset-item>
+            <a-asset-item id="mIdle" src="Movement/Walk_Idle.glb"></a-asset-item>
+            <a-asset-item id="mWalk" src="Movement/Walk.glb"></a-asset-item>
+            <a-asset-item id="mStop" src="Movement/Walk_Stop.glb"></a-asset-item>
+            <a-asset-item id="aStart" src="Normal_Attack/Start.glb"></a-asset-item>
+            <a-asset-item id="aMid" src="Normal_Attack/Mid.glb"></a-asset-item>
+            <a-asset-item id="aEnd" src="Normal_Attack/End.glb"></a-asset-item>
         </a-assets>
 
         <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
-
         <a-light type="ambient" intensity="1.2"></a-light>
 
         <a-entity mindar-image-target="targetIndex: 0">
             <a-entity id="aris-root" position="0 -0.8 0.01">
-                <a-entity id="aris-rotation" rotation="0 0 0">
+                <a-entity id="aris-rotation">
                     <a-gltf-model id="arisIdle" src="#mIdle" scale="0.3 0.3 0.3" visible="true" animation-mixer></a-gltf-model>
-                    <a-gltf-model id="arisWalk" src="#mWalk" scale="0.3 0.3 0.3" visible="false" animation-mixer="timeScale: 1.2"></a-gltf-model>
+                    <a-gltf-model id="arisWalk" src="#mWalk" scale="0.3 0.3 0.3" visible="false" animation-mixer></a-gltf-model>
                     <a-gltf-model id="arisStop" src="#mStop" scale="0.3 0.3 0.3" visible="false"></a-gltf-model>
+                    
+                    <a-gltf-model id="arisAtkStart" src="#aStart" scale="0.3 0.3 0.3" visible="false"></a-gltf-model>
+                    <a-gltf-model id="arisAtkMid" src="#aMid" scale="0.3 0.3 0.3" visible="false" animation-mixer></a-gltf-model>
+                    <a-gltf-model id="arisAtkEnd" src="#aEnd" scale="0.3 0.3 0.3" visible="false"></a-gltf-model>
                 </a-entity>
             </a-entity>
         </a-entity>
@@ -51,64 +69,93 @@
     <script>
         const root = document.querySelector('#aris-root');
         const rotWrapper = document.querySelector('#aris-rotation');
-        const models = { 
-            idle: document.querySelector('#arisIdle'), 
-            walk: document.querySelector('#arisWalk'), 
-            stop: document.querySelector('#arisStop') 
+        const models = {
+            idle: document.querySelector('#arisIdle'),
+            walk: document.querySelector('#arisWalk'),
+            stop: document.querySelector('#arisStop'),
+            atkStart: document.querySelector('#arisAtkStart'),
+            atkMid: document.querySelector('#arisAtkMid'),
+            atkEnd: document.querySelector('#arisAtkEnd')
         };
-        
-        let pos = { x: 0, y: -0.8, z: 0.01 }; 
+
+        let pos = { x: 0, y: -0.8, z: 0.01 };
         let moveData = { x: 0, z: 0, active: false };
+        let isAttacking = false;
         const moveSpeed = 0.05;
 
-        // Custom frame vẫn giữ nguyên để animation mượt
-        const FPS = 24;
-        const TARGET_STOP_FRAME = 40; 
-        const STOP_DURATION_MS = (TARGET_STOP_FRAME / FPS) * 1000;
-
-        const manager = nipplejs.create({
-            zone: document.getElementById('joystick-zone'),
-            mode: 'static',
-            position: { left: '75px', bottom: '75px' },
-            color: 'cyan'
-        });
-
         function showModel(type) {
-            Object.keys(models).forEach(k => { models[k].setAttribute('visible', k === type); });
+            Object.keys(models).forEach(k => models[k].setAttribute('visible', k === type));
         }
 
+        // KẾT THÚC WALK_STOP -> VỀ IDLE
+        models.stop.addEventListener('animation-finished', () => {
+            if (!moveData.active && !isAttacking) showModel('idle');
+        });
+
+        // KẾT THÚC ATK_START -> CHUYỂN SANG ATK_MID (VÒNG LẶP)
+        models.atkStart.addEventListener('animation-finished', () => {
+            if (isAttacking) showModel('atkMid');
+        });
+
+        // KẾT THÚC ATK_END -> VỀ IDLE
+        models.atkEnd.addEventListener('animation-finished', () => {
+            if (!isAttacking && !moveData.active) showModel('idle');
+        });
+
+        // JOYSTICK SETUP
+        const manager = nipplejs.create({
+            zone: document.getElementById('joystick-zone'),
+            mode: 'static', position: {left: '75px', bottom: '75px'}, color: 'cyan'
+        });
+
         manager.on('move', (evt, data) => {
+            if (isAttacking) return; // Khóa di chuyển khi đang đánh
             moveData.active = true;
-            moveData.x = data.vector.x; 
-            moveData.z = -data.vector.y; 
+            moveData.x = data.vector.x;
+            moveData.z = -data.vector.y;
             showModel('walk');
         });
 
         manager.on('end', () => {
             moveData.active = false;
-            showModel('stop');
-            
-            const stopEl = models.stop;
-            stopEl.removeAttribute('animation-mixer');
-            stopEl.setAttribute('animation-mixer', {
-                clip: '*',
-                loop: 'once',
-                clampWhenFinished: true
-            });
+            if (!isAttacking) {
+                showModel('stop');
+                models.stop.removeAttribute('animation-mixer');
+                models.stop.setAttribute('animation-mixer', {clip: '*', loop: 'once', clampWhenFinished: true});
+            }
+        });
 
-            setTimeout(() => {
-                if (!moveData.active) showModel('idle');
-            }, STOP_DURATION_MS);
+        // ATTACK BUTTON SETUP
+        const btn = document.getElementById('attack-btn');
+        
+        btn.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            if (isAttacking) return;
+            isAttacking = true;
+            moveData.active = false; // Dừng ngay lập tức việc di chuyển
+
+            showModel('atkStart');
+            models.atkStart.removeAttribute('animation-mixer');
+            models.atkStart.setAttribute('animation-mixer', {clip: '*', loop: 'once', clampWhenFinished: true});
+        });
+
+        btn.addEventListener('touchend', (e) => {
+            e.preventDefault();
+            if (!isAttacking) return;
+            isAttacking = false;
+
+            showModel('atkEnd');
+            models.atkEnd.removeAttribute('animation-mixer');
+            models.atkEnd.setAttribute('animation-mixer', {clip: '*', loop: 'once', clampWhenFinished: true});
         });
 
         function update() {
-            if (moveData.active) {
+            if (moveData.active && !isAttacking) {
                 pos.x += moveData.x * moveSpeed;
                 pos.z += moveData.z * moveSpeed;
                 root.setAttribute('position', `${pos.x} ${pos.y} ${pos.z}`);
                 
-                let angleRad = Math.atan2(moveData.x, moveData.z);
-                let angleDeg = angleRad * (180 / Math.PI);
+                let angleDeg = Math.atan2(moveData.x, moveData.z) * (180 / Math.PI);
                 rotWrapper.setAttribute('rotation', `0 ${angleDeg} 0`);
             }
             requestAnimationFrame(update);
