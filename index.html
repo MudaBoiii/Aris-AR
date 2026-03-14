@@ -2,7 +2,7 @@
 <html>
 <head>
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Aris AR - Final Blue Edition</title>
+    <title>Aris AR - Classic Hold Final</title>
     <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
     <script src="https://cdn.jsdelivr.net/gh/donmccurdy/aframe-extras@v7.0.0/dist/aframe-extras.min.js"></script>
@@ -14,21 +14,19 @@
         
         #attack-btn {
             position: fixed; bottom: 60px; right: 60px; width: 85px; height: 85px;
-            background: rgba(255, 255, 255, 0.15); 
-            border: 5px solid #fff; 
-            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.15); border: 5px solid #fff; border-radius: 50%;
             color: white; font-size: 35px; font-weight: bold; z-index: 3000;
             display: flex; align-items: center; justify-content: center;
             user-select: none; -webkit-tap-highlight-color: transparent;
-            transition: all 0.2s ease-out;
+            transition: background 0.2s, border-color 0.2s, box-shadow 0.2s;
         }
 
-        /* Nút A sáng xanh dương #4ea0ee khi đang combo */
-        #attack-btn.active-atk {
-            background: rgba(78, 160, 238, 0.7) !important; 
+        /* Mã màu xanh dương yêu cầu: #4ea0ee */
+        #attack-btn.active-blue {
+            background: rgba(78, 160, 238, 0.6) !important;
             border-color: #4ea0ee !important;
             box-shadow: 0 0 25px #4ea0ee;
-            transform: scale(1.1);
+            transform: scale(0.95);
         }
     </style>
 </head>
@@ -39,8 +37,7 @@
 
     <a-scene 
         mindar-image="imageTargetSrc: targets.mind; missTolerance: 10000; stayVisible: true;" 
-        renderer="colorManagement: true; antialias: true;" vr-mode-ui="enabled: false"
-        device-orientation-permission-ui="enabled: false">
+        renderer="colorManagement: true; antialias: true;" vr-mode-ui="enabled: false">
 
         <a-assets>
             <a-asset-item id="mIdle" src="Movement/Walk_Idle.glb"></a-asset-item>
@@ -60,6 +57,7 @@
                     <a-gltf-model id="arisIdle" src="#mIdle" scale="0.3 0.3 0.3" visible="true" animation-mixer></a-gltf-model>
                     <a-gltf-model id="arisWalk" src="#mWalk" scale="0.3 0.3 0.3" visible="false" animation-mixer></a-gltf-model>
                     <a-gltf-model id="arisStop" src="#mStop" scale="0.3 0.3 0.3" visible="false"></a-gltf-model>
+                    
                     <a-gltf-model id="arisAtkStart" src="#aStart" scale="0.3 0.3 0.3" visible="false"></a-gltf-model>
                     <a-gltf-model id="arisAtkMid" src="#aMid" scale="0.3 0.3 0.3" visible="false"></a-gltf-model>
                     <a-gltf-model id="arisAtkEnd" src="#aEnd" scale="0.3 0.3 0.3" visible="false"></a-gltf-model>
@@ -82,38 +80,38 @@
         };
 
         let moveData = { x: 0, z: 0, active: false };
-        let isAttacking = false;
+        let isHolding = false;
 
         function showModel(type) {
-            Object.keys(models).forEach(k => models[k].setAttribute('visible', k === type));
+            Object.keys(models).forEach(k => {
+                models[k].setAttribute('visible', k === type);
+                // Dừng mixer của các model không hiển thị để tiết kiệm tài nguyên
+                if (k !== type && models[k].hasAttribute('animation-mixer')) {
+                    // Tránh dừng idle/walk vì chúng cần chạy liên tục khi hiện
+                    if (k.startsWith('atk') || k === 'stop') {
+                         models[k].removeAttribute('animation-mixer');
+                    }
+                }
+            });
         }
 
-        // --- COMBO SEQUENCE ---
+        // --- TRANSITION LOGIC ---
         models.atkStart.addEventListener('animation-finished', () => {
-            if (isAttacking) {
+            if (isHolding) {
                 showModel('atkMid');
-                models.atkMid.removeAttribute('animation-mixer');
-                models.atkMid.setAttribute('animation-mixer', {clip: '*', loop: 'once', clampWhenFinished: true});
-            }
-        });
-
-        models.atkMid.addEventListener('animation-finished', () => {
-            if (isAttacking) {
-                showModel('atkEnd');
-                models.atkEnd.removeAttribute('animation-mixer');
-                models.atkEnd.setAttribute('animation-mixer', {clip: '*', loop: 'once', clampWhenFinished: true});
+                models.atkMid.setAttribute('animation-mixer', {clip: '*', loop: 'repeat'});
             }
         });
 
         models.atkEnd.addEventListener('animation-finished', () => {
-            isAttacking = false;
-            btn.classList.remove('active-atk');
-            if (moveData.active) showModel('walk');
-            else showModel('idle');
+            if (!isHolding) {
+                if (moveData.active) showModel('walk');
+                else showModel('idle');
+            }
         });
 
         models.stop.addEventListener('animation-finished', () => {
-            if (!moveData.active && !isAttacking) showModel('idle');
+            if (!moveData.active && !isHolding) showModel('idle');
         });
 
         // --- JOYSTICK ---
@@ -126,32 +124,42 @@
             moveData.x = data.vector.x; 
             moveData.z = -data.vector.y;
             moveData.active = true;
-            if (!isAttacking) showModel('walk');
+            if (!isHolding) showModel('walk');
         });
 
         manager.on('end', () => {
             moveData.active = false;
-            if (!isAttacking) {
+            if (!isHolding) {
                 showModel('stop');
-                models.stop.removeAttribute('animation-mixer');
                 models.stop.setAttribute('animation-mixer', {clip: '*', loop: 'once', clampWhenFinished: true});
             }
         });
 
-        // --- NÚT A ---
+        // --- HOLD ATTACK (TOUCHSTART / TOUCHEND) ---
         btn.addEventListener('touchstart', (e) => {
             e.preventDefault();
-            if (isAttacking) return;
-            isAttacking = true;
-            btn.classList.add('active-atk');
+            if (isHolding) return;
+            isHolding = true;
+            btn.classList.add('active-blue');
             
             showModel('atkStart');
-            models.atkStart.removeAttribute('animation-mixer');
             models.atkStart.setAttribute('animation-mixer', {clip: '*', loop: 'once', clampWhenFinished: true});
         });
 
+        btn.addEventListener('touchend', (e) => {
+            e.preventDefault();
+            if (!isHolding) return;
+            isHolding = false;
+            btn.classList.remove('active-blue');
+            
+            // Chuyển sang End và đảm bảo Mixer của Mid đã bị dọn dẹp
+            showModel('atkEnd');
+            models.atkEnd.setAttribute('animation-mixer', {clip: '*', loop: 'once', clampWhenFinished: true});
+        });
+
+        // --- UPDATE LOOP ---
         function update() {
-            if (moveData.active && !isAttacking) {
+            if (moveData.active && !isHolding) {
                 let currPos = root.getAttribute('position');
                 currPos.x += moveData.x * 0.05;
                 currPos.z += moveData.z * 0.05;
