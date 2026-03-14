@@ -2,7 +2,7 @@
 <html>
 <head>
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Aris AR - Final Classic Hold</title>
+    <title>Aris AR - PC & Mobile Master</title>
     <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
     <script src="https://cdn.jsdelivr.net/gh/donmccurdy/aframe-extras@v7.0.0/dist/aframe-extras.min.js"></script>
@@ -14,34 +14,39 @@
         
         #attack-btn {
             position: fixed; bottom: 60px; right: 60px; width: 85px; height: 85px;
-            background: rgba(255, 255, 255, 0.15); 
-            border: 5px solid #fff; 
-            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.15); border: 5px solid #fff; border-radius: 50%;
             color: white; font-size: 35px; font-weight: bold; z-index: 3000;
             display: flex; align-items: center; justify-content: center;
             user-select: none; -webkit-tap-highlight-color: transparent;
-            transition: all 0.15s ease-out;
+            transition: all 0.1s ease-out;
         }
 
-        /* Hiệu ứng đèn xanh dương mã #4ea0ee khi nhấn giữ */
+        /* Đèn xanh dương chuẩn #4ea0ee */
         #attack-btn.active-atk {
             background: rgba(78, 160, 238, 0.7) !important; 
             border-color: #4ea0ee !important;
             box-shadow: 0 0 25px #4ea0ee, inset 0 0 10px #4ea0ee;
             transform: scale(0.9);
         }
+
+        #pc-hint {
+            position: fixed; top: 15px; left: 15px; color: #4ea0ee; 
+            font-family: sans-serif; background: rgba(0,0,0,0.7); 
+            padding: 10px; border-radius: 8px; z-index: 4000; 
+            border: 1px solid #4ea0ee; pointer-events: none;
+        }
+        @media (max-width: 768px) { #pc-hint { display: none; } }
     </style>
 </head>
 
 <body>
+    <div id="pc-hint"><b>PC MODE</b><br>WASD: Move<br>SPACE: Hold to Shoot</div>
     <div id="joystick-zone"></div>
     <div id="attack-btn">A</div>
 
     <a-scene 
         mindar-image="imageTargetSrc: targets.mind; missTolerance: 10000; stayVisible: true;" 
-        renderer="colorManagement: true; antialias: true;" 
-        vr-mode-ui="enabled: false"
-        device-orientation-permission-ui="enabled: false">
+        renderer="colorManagement: true; antialias: true;" vr-mode-ui="enabled: false">
 
         <a-assets>
             <a-asset-item id="mIdle" src="Movement/Walk_Idle.glb"></a-asset-item>
@@ -61,7 +66,6 @@
                     <a-gltf-model id="arisIdle" src="#mIdle" scale="0.3 0.3 0.3" visible="true" animation-mixer></a-gltf-model>
                     <a-gltf-model id="arisWalk" src="#mWalk" scale="0.3 0.3 0.3" visible="false" animation-mixer></a-gltf-model>
                     <a-gltf-model id="arisStop" src="#mStop" scale="0.3 0.3 0.3" visible="false"></a-gltf-model>
-                    
                     <a-gltf-model id="arisAtkStart" src="#aStart" scale="0.3 0.3 0.3" visible="false"></a-gltf-model>
                     <a-gltf-model id="arisAtkMid" src="#aMid" scale="0.3 0.3 0.3" visible="false"></a-gltf-model>
                     <a-gltf-model id="arisAtkEnd" src="#aEnd" scale="0.3 0.3 0.3" visible="false"></a-gltf-model>
@@ -85,6 +89,8 @@
 
         let moveData = { x: 0, z: 0, active: false };
         let isHolding = false;
+        let midTriggered = false;
+        let keys = {};
 
         function showModel(type) {
             Object.keys(models).forEach(k => {
@@ -92,18 +98,26 @@
             });
         }
 
-        // --- CHUỖI LOGIC ANIMATION ---
-
-        // 1. Gồng xong (Start) -> Nếu còn giữ thì Bắn (Mid)
-        models.atkStart.addEventListener('animation-finished', () => {
-            if (isHolding) {
-                showModel('atkMid');
-                models.atkMid.removeAttribute('animation-mixer');
-                models.atkMid.setAttribute('animation-mixer', {clip: '*', loop: 'repeat'});
+        // --- KỸ THUẬT GỐI ĐẦU (ANTI A-POSE) ---
+        setInterval(() => {
+            if (isHolding && models.atkStart.getAttribute('visible') === 'true') {
+                const mixer = models.atkStart.components['animation-mixer']?.mixer;
+                if (mixer) {
+                    const action = mixer._actions[0];
+                    if (action && action.time > (action._clip.duration * 0.9)) {
+                        if (!midTriggered) {
+                            midTriggered = true;
+                            models.atkMid.setAttribute('visible', true);
+                            models.atkMid.removeAttribute('animation-mixer');
+                            models.atkMid.setAttribute('animation-mixer', {clip: '*', loop: 'repeat'});
+                            setTimeout(() => { if(isHolding) models.atkStart.setAttribute('visible', false); }, 50);
+                        }
+                    }
+                }
             }
-        });
+        }, 10);
 
-        // 2. Thu súng xong (End) -> Về Idle hoặc Walk
+        // --- EVENTS ---
         models.atkEnd.addEventListener('animation-finished', () => {
             if (!isHolding) {
                 if (moveData.active) showModel('walk');
@@ -111,68 +125,73 @@
             }
         });
 
-        // 3. Dừng đi bộ xong (Stop) -> Về Idle
         models.stop.addEventListener('animation-finished', () => {
             if (!moveData.active && !isHolding) showModel('idle');
         });
 
-        // --- JOYSTICK ---
-        const manager = nipplejs.create({
-            zone: document.getElementById('joystick-zone'),
-            mode: 'static', position: {left: '75px', bottom: '75px'}, color: 'cyan'
+        // --- SHARED ACTIONS ---
+        function startAttack() {
+            if (isHolding) return;
+            isHolding = true; midTriggered = false;
+            btn.classList.add('active-atk');
+            showModel('atkStart');
+            models.atkStart.removeAttribute('animation-mixer');
+            models.atkStart.setAttribute('animation-mixer', {clip: '*', loop: 'once', clampWhenFinished: true});
+        }
+
+        function endAttack() {
+            if (!isHolding) return;
+            isHolding = false;
+            btn.classList.remove('active-atk');
+            showModel('atkEnd');
+            models.atkEnd.removeAttribute('animation-mixer');
+            models.atkEnd.setAttribute('animation-mixer', {clip: '*', loop: 'once', clampWhenFinished: true});
+        }
+
+        // --- MOBILE CONTROLS ---
+        const manager = nipplejs.create({ zone: document.getElementById('joystick-zone'), mode: 'static', position: {left: '75px', bottom: '75px'}, color: 'cyan' });
+        manager.on('move', (evt, data) => { moveData.x = data.vector.x; moveData.z = -data.vector.y; moveData.active = true; if (!isHolding) showModel('walk'); });
+        manager.on('end', () => { moveData.active = false; if (!isHolding) { showModel('stop'); models.stop.removeAttribute('animation-mixer'); models.stop.setAttribute('animation-mixer', {clip: '*', loop: 'once', clampWhenFinished: true}); } });
+        btn.addEventListener('touchstart', (e) => { e.preventDefault(); startAttack(); });
+        btn.addEventListener('touchend', (e) => { e.preventDefault(); endAttack(); });
+
+        // --- PC CONTROLS ---
+        window.addEventListener('keydown', (e) => {
+            if (e.repeat) return;
+            keys[e.code] = true;
+            if (e.code === 'Space') startAttack();
+        });
+        window.addEventListener('keyup', (e) => {
+            keys[e.code] = false;
+            if (e.code === 'Space') endAttack();
         });
 
-        manager.on('move', (evt, data) => {
-            moveData.x = data.vector.x; 
-            moveData.z = -data.vector.y;
-            moveData.active = true;
-            if (!isHolding) showModel('walk');
-        });
+        function handlePCMovement() {
+            let x = 0, z = 0;
+            if (keys['KeyW'] || keys['ArrowUp']) z = 1;
+            if (keys['KeyS'] || keys['ArrowDown']) z = -1;
+            if (keys['KeyA'] || keys['ArrowLeft']) x = -1;
+            if (keys['KeyD'] || keys['ArrowRight']) x = 1;
 
-        manager.on('end', () => {
-            moveData.active = false;
-            if (!isHolding) {
+            if ((x !== 0 || z !== 0) && !isHolding) {
+                moveData.x = x; moveData.z = -z;
+                if (!moveData.active) { moveData.active = true; showModel('walk'); }
+            } else if (moveData.active && !isHolding && x === 0 && z === 0) {
+                moveData.active = false;
                 showModel('stop');
                 models.stop.removeAttribute('animation-mixer');
                 models.stop.setAttribute('animation-mixer', {clip: '*', loop: 'once', clampWhenFinished: true});
             }
-        });
+        }
 
-        // --- NÚT A (NHẤN GIỮ) ---
-        btn.addEventListener('touchstart', (e) => {
-            e.preventDefault();
-            if (isHolding) return;
-            isHolding = true;
-            
-            btn.classList.add('active-atk');
-            
-            showModel('atkStart');
-            models.atkStart.removeAttribute('animation-mixer');
-            models.atkStart.setAttribute('animation-mixer', {clip: '*', loop: 'once', clampWhenFinished: true});
-        });
-
-        btn.addEventListener('touchend', (e) => {
-            e.preventDefault();
-            if (!isHolding) return;
-            isHolding = false;
-            
-            btn.classList.remove('active-atk');
-            
-            showModel('atkEnd');
-            models.atkEnd.removeAttribute('animation-mixer');
-            models.atkEnd.setAttribute('animation-mixer', {clip: '*', loop: 'once', clampWhenFinished: true});
-        });
-
-        // --- GAME LOOP ---
+        // --- UPDATE LOOP ---
         function update() {
+            handlePCMovement();
             if (moveData.active && !isHolding) {
-                let currPos = root.getAttribute('position');
-                currPos.x += moveData.x * 0.05;
-                currPos.z += moveData.z * 0.05;
-                root.setAttribute('position', currPos);
-                
-                let angleDeg = Math.atan2(moveData.x, moveData.z) * (180 / Math.PI);
-                rotWrapper.setAttribute('rotation', `0 ${angleDeg} 0`);
+                let pos = root.getAttribute('position');
+                pos.x += moveData.x * 0.05; pos.z += moveData.z * 0.05;
+                root.setAttribute('position', pos);
+                rotWrapper.setAttribute('rotation', `0 ${Math.atan2(moveData.x, moveData.z) * 57.3} 0`);
             }
             requestAnimationFrame(update);
         }
