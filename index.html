@@ -2,7 +2,7 @@
 <html>
 <head>
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Aris AR - Absolute Final Version</title>
+    <title>Aris AR - Final Sync & Cafe Rename</title>
     <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
     <script src="https://cdn.jsdelivr.net/gh/donmccurdy/aframe-extras@v7.0.0/dist/aframe-extras.min.js"></script>
@@ -21,11 +21,9 @@
         }
         #action-btn { bottom: 50px; right: 30px; font-size: 32px; } 
         #ex-btn { bottom: 50px; right: 125px; font-size: 22px; }
-
         #action-btn.active-combat { background: rgba(78, 160, 238, 0.6); border-color: #4ea0ee; box-shadow: 0 0 25px #4ea0ee; transform: scale(0.9); }
         #action-btn.active-cafe { background: rgba(255, 165, 0, 0.6); border-color: #ffa500; box-shadow: 0 0 25px #ffa500; transform: scale(0.9); }
         #ex-btn.active-ex { background: rgba(160, 32, 240, 0.6); border-color: #a020f0; box-shadow: 0 0 30px #a020f0; transform: scale(0.9); }
-
         #switch-btn {
             position: fixed; bottom: 145px; right: 42px; width: 50px; height: 50px;
             background: rgba(0, 0, 0, 0.5); border: 2px solid #fff; border-radius: 10px;
@@ -62,6 +60,7 @@
             <audio id="snd-cafe-3" src="SFX/Cafe/Alice_Cafe_Act_3.ogg"></audio>
             <audio id="snd-cafe-4" src="SFX/Cafe/Alice_Cafe_Act_4.ogg"></audio>
             <audio id="snd-cafe-5" src="SFX/Cafe/Alice_Cafe_Act_5.ogg"></audio>
+            
             <audio id="snd-shout-1" src="SFX/Fire/Normal/Alice_Battle_Shout_1.ogg"></audio>
             <audio id="snd-shout-2" src="SFX/Fire/Normal/Alice_Battle_Shout_2.ogg"></audio>
             <audio id="snd-shout-3" src="SFX/Fire/Normal/Alice_Battle_Shout_3.ogg"></audio>
@@ -98,7 +97,7 @@
 
     <script>
         const FPS = 24;
-        const SOUND_TIMING = { normalGunFrame: 5, exGunFrame: 12 };
+        const LOOP_START_TIME = 17 / FPS; 
         const STOP_DURATION_MS = (48 / FPS) * 1000;
 
         let currentMode = 'combat', isActionActive = false, atkCount = 0, exCount = 0, cafeTimer = null, gunDelayTimeout = null;
@@ -106,6 +105,7 @@
 
         const root = document.querySelector('#aris-root'), rotWrapper = document.querySelector('#aris-rotation');
         const actionBtn = document.getElementById('action-btn'), exBtn = document.getElementById('ex-btn'), switchBtn = document.getElementById('switch-btn');
+        const sndNormal = document.getElementById('snd-gun-normal');
 
         const models = {
             idle: document.querySelector('#arisIdle'), walk: document.querySelector('#arisWalk'),
@@ -115,19 +115,34 @@
             cInter: document.querySelector('#cafeInter'), ex: document.querySelector('#arisEX')
         };
 
+        // --- ĐỒNG BỘ ÂM THANH THEO VÒNG LẶP ANIMATION MID ---
+        models.atkMid.addEventListener('loop-once', () => {
+            if (isActionActive && currentMode === 'combat') {
+                sndNormal.pause();
+                sndNormal.currentTime = LOOP_START_TIME;
+                sndNormal.play().catch(()=>{});
+            }
+        });
+
         function showModel(type) { Object.keys(models).forEach(k => models[k].setAttribute('visible', k === type)); }
         function stopSound(id) { const s = document.getElementById(id); if(s) { s.pause(); s.currentTime = 0; } }
         
-        function playSound(id, loop = false) {
+        function playSound(id) {
             const s = document.getElementById(id);
-            if(s) { s.pause(); s.currentTime = 0; s.loop = loop; s.play().catch(()=>{}); }
+            if(s) { s.pause(); s.currentTime = 0; s.play().catch(()=>{}); }
         }
 
         function triggerGunSFX(mode) {
-            const frame = (mode === 'normal') ? SOUND_TIMING.normalGunFrame : SOUND_TIMING.exGunFrame;
+            const frame = (mode === 'normal') ? 5 : 12;
             const id = (mode === 'normal') ? 'snd-gun-normal' : 'snd-gun-ex';
             clearTimeout(gunDelayTimeout);
-            gunDelayTimeout = setTimeout(() => { if(isActionActive) playSound(id, (mode === 'normal')); }, (frame / FPS) * 1000);
+            gunDelayTimeout = setTimeout(() => { 
+                if(isActionActive) {
+                    const s = document.getElementById(id);
+                    s.loop = (mode === 'ex'); 
+                    s.play().catch(()=>{});
+                }
+            }, (frame / FPS) * 1000);
         }
 
         function startCafeVoice() {
@@ -136,7 +151,7 @@
                 if(currentMode === 'cafe' && !isActionActive) {
                     const ids = ['snd-cafe-1', 'snd-cafe-2', 'snd-cafe-3', 'snd-cafe-4', 'snd-cafe-5'];
                     const pick = ids[Math.floor(Math.random() * ids.length)];
-                    ids.forEach(i => stopSound(i)); // Tắt câu cũ trước khi nói câu mới
+                    ids.forEach(i => stopSound(i));
                     playSound(pick);
                 }
             }, 15000);
@@ -160,7 +175,7 @@
 
         function onActionEnd() {
             actionBtn.classList.remove('active-combat', 'active-cafe');
-            if (currentMode === 'combat' && isActionActive && models.atkMid.getAttribute('visible')) {
+            if (currentMode === 'combat' && isActionActive && (models.atkMid.getAttribute('visible') === 'true' || models.atkStart.getAttribute('visible') === 'true')) {
                 isActionActive = false; stopSound('snd-gun-normal'); showModel('atkEnd');
                 models.atkEnd.removeAttribute('animation-mixer');
                 models.atkEnd.setAttribute('animation-mixer', {clip: '*', loop: 'once', clampWhenFinished: true});
@@ -183,7 +198,7 @@
 
         models.atkStart.addEventListener('animation-finished', () => { if(isActionActive) showModel('atkMid'); });
         models.atkEnd.addEventListener('animation-finished', () => { if(!isActionActive && !moveData.active) showModel('idle'); });
-        models.ex.addEventListener('animation-finished', () => { isActionActive = false; exBtn.classList.remove('active-ex'); showModel(currentMode === 'combat' ? 'idle' : 'cIdle'); });
+        models.ex.addEventListener('animation-finished', () => { isActionActive = false; stopSound('snd-gun-ex'); exBtn.classList.remove('active-ex'); showModel(currentMode === 'combat' ? 'idle' : 'cIdle'); });
         models.cInter.addEventListener('animation-finished', () => { isActionActive = false; showModel('cIdle'); });
 
         switchBtn.addEventListener('click', () => {
@@ -213,7 +228,7 @@
 
         function update() {
             if (moveData.active && !isActionActive) {
-                const speed = (currentMode === 'cafe') ? 0.005 : 0.05;
+                const speed = (currentMode === 'cafe') ? 0.015 : 0.05;
                 let currPos = root.getAttribute('position');
                 currPos.x += moveData.x * speed; currPos.z += moveData.z * speed;
                 root.setAttribute('position', currPos);
