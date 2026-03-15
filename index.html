@@ -2,7 +2,7 @@
 <html>
 <head>
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Aris AR - Standard Enhanced</title>
+    <title>Aris AR - Audio Act Fixed</title>
     <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
     <script src="https://cdn.jsdelivr.net/gh/donmccurdy/aframe-extras@v7.0.0/dist/aframe-extras.min.js"></script>
@@ -55,11 +55,12 @@
             <a-asset-item id="cInter" src="Cafe/Walk_Cafe_Inter.glb"></a-asset-item>
             <a-asset-item id="exSkill" src="EX/EX.glb"></a-asset-item>
 
-            <audio id="snd-cafe-1" src="SFX/Cafe/Alice_Cafe_1.ogg"></audio>
-            <audio id="snd-cafe-2" src="SFX/Cafe/Alice_Cafe_2.ogg"></audio>
-            <audio id="snd-cafe-3" src="SFX/Cafe/Alice_Cafe_3.ogg"></audio>
-            <audio id="snd-cafe-4" src="SFX/Cafe/Alice_Cafe_4.ogg"></audio>
-            <audio id="snd-cafe-5" src="SFX/Cafe/Alice_Cafe_5.ogg"></audio>
+            <audio id="snd-cafe-1" src="SFX/Cafe/Alice_Cafe_Act_1.ogg"></audio>
+            <audio id="snd-cafe-2" src="SFX/Cafe/Alice_Cafe_Act_2.ogg"></audio>
+            <audio id="snd-cafe-3" src="SFX/Cafe/Alice_Cafe_Act_3.ogg"></audio>
+            <audio id="snd-cafe-4" src="SFX/Cafe/Alice_Cafe_Act_4.ogg"></audio>
+            <audio id="snd-cafe-5" src="SFX/Cafe/Alice_Cafe_Act_5.ogg"></audio>
+            
             <audio id="snd-shout-1" src="SFX/Fire/Normal/Alice_Battle_Shout_1.ogg"></audio>
             <audio id="snd-shout-2" src="SFX/Fire/Normal/Alice_Battle_Shout_2.ogg"></audio>
             <audio id="snd-shout-3" src="SFX/Fire/Normal/Alice_Battle_Shout_3.ogg"></audio>
@@ -96,7 +97,7 @@
 
     <script>
         const FPS = 24;
-        const LOOP_SYNC_SEC = 17 / FPS; // Giây thứ 0.708 (Frame 17)
+        const LOOP_SYNC_SEC = 17 / FPS; 
         const SOUND_TIMING = { normalGunFrame: 5, exGunFrame: 12 };
         const STOP_DURATION_MS = (48 / FPS) * 1000;
 
@@ -116,11 +117,18 @@
         };
 
         function showModel(type) { Object.keys(models).forEach(k => models[k].setAttribute('visible', k === type)); }
-        function stopSound(id) { const s = document.getElementById(id); if(s) { s.pause(); s.currentTime = 0; } }
+        
+        function stopSound(id) { 
+            const s = document.getElementById(id); 
+            if(s) { s.pause(); s.currentTime = 0; s.loop = false; } 
+        }
         
         function playSound(id, loop = false) {
             const s = document.getElementById(id);
-            if(s) { s.pause(); s.currentTime = 0; s.loop = loop; s.play().catch(()=>{}); }
+            if(s) { 
+                s.pause(); s.currentTime = 0; s.loop = loop; 
+                s.play().catch(e => console.log("Audio play blocked", e)); 
+            }
         }
 
         function triggerGunSFX(mode) {
@@ -128,13 +136,11 @@
             const id = (mode === 'normal') ? 'snd-gun-normal' : 'snd-gun-ex';
             clearTimeout(gunDelayTimeout);
             gunDelayTimeout = setTimeout(() => { 
-                if(isActionActive) {
-                    // CỰC QUAN TRỌNG: Normal không để loop để update() tự sync, EX để loop
-                    playSound(id, (mode === 'ex')); 
-                }
+                if(isActionActive) playSound(id, true); 
             }, (frame / FPS) * 1000);
         }
 
+        // Voice Cafe ngẫu nhiên mỗi 15 giây
         function startCafeVoice() {
             if(cafeTimer) clearInterval(cafeTimer);
             cafeTimer = setInterval(() => {
@@ -160,15 +166,24 @@
                 actionBtn.classList.add('active-cafe'); showModel('cInter');
                 models.cInter.removeAttribute('animation-mixer');
                 models.cInter.setAttribute('animation-mixer', {clip: '*', loop: 'once', clampWhenFinished: true});
+                // Khi nhấn Cafe thì phát 1 câu ngay lập tức
+                const ids = ['snd-cafe-1', 'snd-cafe-2', 'snd-cafe-3', 'snd-cafe-4', 'snd-cafe-5'];
+                playSound(ids[Math.floor(Math.random() * ids.length)]);
             }
         }
 
         function onActionEnd() {
-            actionBtn.classList.remove('active-combat', 'active-cafe');
-            if (currentMode === 'combat' && isActionActive && (models.atkMid.getAttribute('visible') === 'true' || models.atkStart.getAttribute('visible') === 'true')) {
-                isActionActive = false; stopSound('snd-gun-normal'); showModel('atkEnd');
-                models.atkEnd.removeAttribute('animation-mixer');
-                models.atkEnd.setAttribute('animation-mixer', {clip: '*', loop: 'once', clampWhenFinished: true});
+            if (isActionActive) {
+                isActionActive = false;
+                actionBtn.classList.remove('active-combat', 'active-cafe');
+                stopSound('snd-gun-normal');
+                if (currentMode === 'combat') {
+                    showModel('atkEnd');
+                    models.atkEnd.removeAttribute('animation-mixer');
+                    models.atkEnd.setAttribute('animation-mixer', {clip: '*', loop: 'once', clampWhenFinished: true});
+                } else {
+                    showModel('cIdle');
+                }
             }
         }
 
@@ -182,21 +197,24 @@
             models.ex.setAttribute('animation-mixer', {clip: '*', loop: 'once', clampWhenFinished: true});
         }
 
-        actionBtn.addEventListener('touchstart', onActionStart); actionBtn.addEventListener('mousedown', onActionStart);
-        window.addEventListener('mouseup', onActionEnd); window.addEventListener('touchend', (e) => { if(e.target === actionBtn) onActionEnd(); });
-        exBtn.addEventListener('touchstart', onEXStart); exBtn.addEventListener('mousedown', onEXStart);
+        actionBtn.addEventListener('mousedown', onActionStart);
+        actionBtn.addEventListener('touchstart', onActionStart);
+        window.addEventListener('mouseup', onActionEnd);
+        window.addEventListener('touchend', (e) => { if(isActionActive) onActionEnd(); });
+        exBtn.addEventListener('mousedown', onEXStart);
+        exBtn.addEventListener('touchstart', onEXStart);
 
         models.atkStart.addEventListener('animation-finished', () => { if(isActionActive) { showModel('atkMid'); lastMidTime = 0; } });
         models.atkEnd.addEventListener('animation-finished', () => { if(!isActionActive && !moveData.active) showModel('idle'); });
         models.ex.addEventListener('animation-finished', () => { isActionActive = false; exBtn.classList.remove('active-ex'); stopSound('snd-gun-ex'); showModel(currentMode === 'combat' ? 'idle' : 'cIdle'); });
-        models.cInter.addEventListener('animation-finished', () => { isActionActive = false; showModel('cIdle'); });
+        models.cInter.addEventListener('animation-finished', () => { isActionActive = false; actionBtn.classList.remove('active-cafe'); showModel('cIdle'); });
 
         switchBtn.addEventListener('click', () => {
             if (isActionActive) return;
             if (currentMode === 'combat') {
                 currentMode = 'cafe'; actionBtn.innerText = 'I'; exBtn.style.display = 'none'; showModel('cIdle'); startCafeVoice();
             } else {
-                currentMode = 'combat'; actionBtn.innerText = 'A'; exBtn.style.display = 'flex'; showModel('idle'); clearInterval(cafeTimer); cafeTimer = null;
+                currentMode = 'combat'; actionBtn.innerText = 'A'; exBtn.style.display = 'flex'; showModel('idle'); clearInterval(cafeTimer);
             }
         });
 
@@ -224,17 +242,11 @@
                 root.setAttribute('position', currPos);
                 rotWrapper.setAttribute('rotation', `0 ${Math.atan2(moveData.x, moveData.z) * (180 / Math.PI)} 0`);
             }
-
-            // ĐẮP THÊM: Logic Sync âm thanh chuẩn
             if (isActionActive && models.atkMid.getAttribute('visible') === 'true') {
                 const mixer = models.atkMid.components['animation-mixer'].mixer;
                 if (mixer && mixer._actions[0]) {
                     let cur = mixer._actions[0].time;
-                    if (cur < lastMidTime) { // Animation vừa lặp lại loop mới
-                        sndNormal.pause();
-                        sndNormal.currentTime = LOOP_SYNC_SEC;
-                        sndNormal.play().catch(()=>{});
-                    }
+                    if (cur < lastMidTime) { sndNormal.currentTime = LOOP_SYNC_SEC; }
                     lastMidTime = cur;
                 }
             }
