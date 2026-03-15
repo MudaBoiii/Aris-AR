@@ -133,7 +133,7 @@
     <script>
         const FPS = 24;
         let currentMode = 'combat', isActionActive = false, isEXRunning = false, lastMidTime = 0;
-        let isFirstLoop = true; // Thêm biến kiểm soát SFX Normal
+        let isFirstLoop = true; // Biến kiểm soát SFX Normal
         let cafeVoiceTimeout = null, stopTimer = null;
         let moveData = { x: 0, z: 0, active: false };
 
@@ -151,7 +151,7 @@
         const sndEx = document.getElementById('snd-gun-ex');
 
         function showModel(type) { Object.keys(models).forEach(k => models[k].setAttribute('visible', k === type)); }
-        function stopSnd(s) { if(s) { s.pause(); s.currentTime = 0; s.loop = false; } }
+        function stopSnd(s) { if(s) { s.pause(); s.currentTime = 0; s.loop = false; s.onended = null; } }
         function playSnd(s, loop=false) { if(s) { s.pause(); s.currentTime = 0; s.loop = loop; s.play().catch(()=>{}); } }
 
         function autoCafeVoice() {
@@ -170,9 +170,25 @@
 
             if (currentMode === 'combat') {
                 isActionActive = true; moveData.active = false;
-                isFirstLoop = true; // Reset biến loop súng
+                isFirstLoop = true; 
                 actionBtn.classList.add('active-combat'); showModel('atkStart');
-                setTimeout(() => { if(isActionActive) playSnd(sndNormal, true); }, 200);
+                
+                // --- XỬ LÝ ÂM THANH NORMAL ---
+                setTimeout(() => { 
+                    if(isActionActive) {
+                        // Chạy bản 1 KHÔNG loop để nó có thể kết thúc
+                        playSnd(sndNormal, false); 
+                        
+                        // Khi bản 1 kết thúc, tự động nhảy sang bản 2 và loop mãi mãi
+                        sndNormal.onended = () => {
+                            if(isActionActive) {
+                                isFirstLoop = false;
+                                playSnd(sndNormal2, true);
+                            }
+                        };
+                    } 
+                }, 200);
+
                 models.atkStart.removeAttribute('animation-mixer');
                 models.atkStart.setAttribute('animation-mixer', {clip: '*', loop: 'once', clampWhenFinished: true});
             } else {
@@ -187,8 +203,10 @@
             if (currentMode === 'combat' && isActionActive) {
                 isActionActive = false;
                 actionBtn.classList.remove('active-combat');
+                // Tắt tất cả âm thanh súng
                 stopSnd(sndNormal);
-                stopSnd(sndNormal2); // Dừng cả âm thanh súng thứ 2
+                stopSnd(sndNormal2);
+                
                 showModel('atkEnd');
                 models.atkEnd.removeAttribute('animation-mixer');
                 models.atkEnd.setAttribute('animation-mixer', {clip: '*', loop: 'once', clampWhenFinished: true});
@@ -202,11 +220,10 @@
             isEXRunning = true; moveData.active = false;
             exBtn.classList.add('active-ex'); showModel('ex');
             
-            // Fix trễ EX: Chạy súng sớm hơn (50ms thay vì 500ms) để khớp giọng
             setTimeout(() => { if(isEXRunning) playSnd(sndEx, true); }, 50); 
             
             const voices = ['snd-ex-v1','snd-ex-v2','snd-ex-v3','snd-ex-l1','snd-ex-l2','snd-ex-l3'];
-            playSnd(document.getElementById(voices[Math.floor(Math.random()*6)]));
+            playSnd(document.getElementById(voices[Math.floor(Math.random()*voices.length)]));
             models.ex.removeAttribute('animation-mixer');
             models.ex.setAttribute('animation-mixer', {clip: '*', loop: 'once', clampWhenFinished: true});
         }
@@ -278,13 +295,7 @@
                 if (mixer && mixer._actions[0]) {
                     let cur = mixer._actions[0].time;
                     if (cur < lastMidTime) {
-                        // Logic đổi sang normal2.mp3 khi loop
-                        if (isFirstLoop) {
-                            isFirstLoop = false;
-                            stopSnd(sndNormal);
-                            playSnd(sndNormal2, true);
-                        }
-                        // Đồng bộ frame âm thanh
+                        // Đồng bộ frame âm thanh cho bản đang phát (1 hoặc 2)
                         const currentSnd = isFirstLoop ? sndNormal : sndNormal2;
                         currentSnd.currentTime = 17/24;
                     }
