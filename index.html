@@ -2,12 +2,11 @@
 <html>
 <head>
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Aris AR - Final SFX Update</title>
+    <title>Aris AR - Cafe & Audio Fixed</title>
     <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
     <script src="https://cdn.jsdelivr.net/gh/donmccurdy/aframe-extras@v7.0.0/dist/aframe-extras.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/nipplejs/0.10.1/nipplejs.min.js"></script>
-
     <style>
         body { margin: 0; overflow: hidden; touch-action: none; background: #000; }
         #joystick-zone { position: fixed; bottom: 30px; left: 30px; width: 120px; height: 120px; z-index: 3000; }
@@ -21,11 +20,9 @@
         }
         #action-btn { bottom: 50px; right: 30px; font-size: 32px; } 
         #ex-btn { bottom: 50px; right: 125px; font-size: 22px; }
-
         #action-btn.active-combat { background: rgba(78, 160, 238, 0.6); border-color: #4ea0ee; box-shadow: 0 0 25px #4ea0ee; transform: scale(0.9); }
         #action-btn.active-cafe { background: rgba(255, 165, 0, 0.6); border-color: #ffa500; box-shadow: 0 0 25px #ffa500; transform: scale(0.9); }
         #ex-btn.active-ex { background: rgba(160, 32, 240, 0.6); border-color: #a020f0; box-shadow: 0 0 30px #a020f0; transform: scale(0.9); }
-
         #switch-btn {
             position: fixed; bottom: 145px; right: 42px; width: 50px; height: 50px;
             background: rgba(0, 0, 0, 0.5); border: 2px solid #fff; border-radius: 10px;
@@ -34,17 +31,13 @@
         }
     </style>
 </head>
-
 <body>
     <div id="joystick-zone"></div>
     <div id="switch-btn">S</div>
     <div id="ex-btn" class="btn-action">B</div>
     <div id="action-btn" class="btn-action">A</div>
 
-    <a-scene 
-        mindar-image="imageTargetSrc: targets.mind; missTolerance: 10000; stayVisible: true; filterMinCF: 0.0001; filterBeta: 0.001;" 
-        renderer="colorManagement: true; antialias: true;" vr-mode-ui="enabled: false" device-orientation-permission-ui="enabled: false">
-
+    <a-scene mindar-image="imageTargetSrc: targets.mind; stayVisible: true;" renderer="colorManagement: true;">
         <a-assets>
             <a-asset-item id="mIdle" src="Movement/Walk_Idle.glb"></a-asset-item>
             <a-asset-item id="mWalk" src="Movement/Walk.glb"></a-asset-item>
@@ -62,38 +55,33 @@
             <audio id="snd-cafe-3" src="SFX/Cafe/Alice_Cafe_Act_3.ogg"></audio>
             <audio id="snd-cafe-4" src="SFX/Cafe/Alice_Cafe_Act_4.ogg"></audio>
             <audio id="snd-cafe-5" src="SFX/Cafe/Alice_Cafe_Act_5.ogg"></audio>
-
             <audio id="snd-shout-1" src="SFX/Fire/Normal/Alice_Battle_Shout_1.ogg"></audio>
             <audio id="snd-shout-2" src="SFX/Fire/Normal/Alice_Battle_Shout_2.ogg"></audio>
             <audio id="snd-shout-3" src="SFX/Fire/Normal/Alice_Battle_Shout_3.ogg"></audio>
-
             <audio id="snd-ex-v1" src="SFX/Fire/EX/Alice_ExSkill_1.ogg"></audio>
             <audio id="snd-ex-v2" src="SFX/Fire/EX/Alice_ExSkill_2.ogg"></audio>
             <audio id="snd-ex-v3" src="SFX/Fire/EX/Alice_ExSkill_3.ogg"></audio>
             <audio id="snd-ex-l1" src="SFX/Fire/EX/Alice_ExSkill_Level_1.ogg"></audio>
             <audio id="snd-ex-l2" src="SFX/Fire/EX/Alice_ExSkill_Level_2.ogg"></audio>
             <audio id="snd-ex-l3" src="SFX/Fire/EX/Alice_ExSkill_Level_3.ogg"></audio>
-
             <audio id="snd-gun-normal" src="SFX/Gun/Normal.mp3"></audio>
             <audio id="snd-gun-ex" src="SFX/Gun/EX.mp3"></audio>
         </a-assets>
 
         <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
-        <a-light type="ambient" intensity="1.2"></a-light>
-
         <a-entity mindar-image-target="targetIndex: 0">
             <a-entity id="aris-root" position="0 -0.8 0.01">
                 <a-entity id="aris-rotation" rotation="0 0 0">
-                    <a-gltf-model id="arisIdle" src="#mIdle" scale="0.3 0.3 0.3" visible="true" animation-mixer></a-gltf-model>
-                    <a-gltf-model id="arisWalk" src="#mWalk" scale="0.3 0.3 0.3" visible="false" animation-mixer></a-gltf-model>
-                    <a-gltf-model id="arisStop" src="#mStop" scale="0.3 0.3 0.3" visible="false"></a-gltf-model>
-                    <a-gltf-model id="arisAtkStart" src="#aStart" scale="0.3 0.3 0.3" visible="false"></a-gltf-model>
-                    <a-gltf-model id="arisAtkMid" src="#aMid" scale="0.3 0.3 0.3" visible="false" animation-mixer></a-gltf-model>
-                    <a-gltf-model id="arisAtkEnd" src="#aEnd" scale="0.3 0.3 0.3" visible="false"></a-gltf-model>
-                    <a-gltf-model id="cafeIdle" src="#cIdle" scale="0.3 0.3 0.3" visible="false" animation-mixer></a-gltf-model>
-                    <a-gltf-model id="cafeWalk" src="#cWalk" scale="0.3 0.3 0.3" visible="false" animation-mixer></a-gltf-model>
-                    <a-gltf-model id="cafeInter" src="#cInter" scale="0.3 0.3 0.3" visible="false"></a-gltf-model>
-                    <a-gltf-model id="arisEX" src="#exSkill" scale="0.3 0.3 0.3" visible="false"></a-gltf-model>
+                    <a-gltf-model id="arisIdle" src="#mIdle" visible="true" animation-mixer></a-gltf-model>
+                    <a-gltf-model id="arisWalk" src="#mWalk" visible="false" animation-mixer></a-gltf-model>
+                    <a-gltf-model id="arisStop" src="#mStop" visible="false"></a-gltf-model>
+                    <a-gltf-model id="arisAtkStart" src="#aStart" visible="false"></a-gltf-model>
+                    <a-gltf-model id="arisAtkMid" src="#aMid" visible="false" animation-mixer></a-gltf-model>
+                    <a-gltf-model id="arisAtkEnd" src="#aEnd" visible="false"></a-gltf-model>
+                    <a-gltf-model id="cafeIdle" src="#cIdle" visible="false" animation-mixer></a-gltf-model>
+                    <a-gltf-model id="cafeWalk" src="#cWalk" visible="false" animation-mixer></a-gltf-model>
+                    <a-gltf-model id="cafeInter" src="#cInter" visible="false"></a-gltf-model>
+                    <a-gltf-model id="arisEX" src="#exSkill" visible="false"></a-gltf-model>
                 </a-entity>
             </a-entity>
         </a-entity>
@@ -101,15 +89,17 @@
 
     <script>
         const FPS = 24;
-        const TARGET_STOP_FRAME = 48; 
-        const STOP_DURATION_MS = (TARGET_STOP_FRAME / FPS) * 1000;
+        const SOUND_TIMING = { normalGunFrame: 5, exGunFrame: 12 };
 
-        const root = document.querySelector('#aris-root');
-        const rotWrapper = document.querySelector('#aris-rotation');
+        let currentMode = 'combat';
+        let isActionActive = false;
+        let atkCount = 0;
+        let exCount = 0;
+        let cafeTimer = null;
+        let gunDelayTimeout = null;
+
         const actionBtn = document.getElementById('action-btn');
         const exBtn = document.getElementById('ex-btn');
-        const switchBtn = document.getElementById('switch-btn');
-
         const models = {
             idle: document.querySelector('#arisIdle'), walk: document.querySelector('#arisWalk'),
             stop: document.querySelector('#arisStop'), atkStart: document.querySelector('#arisAtkStart'),
@@ -118,128 +108,140 @@
             cInter: document.querySelector('#cafeInter'), ex: document.querySelector('#arisEX')
         };
 
-        let moveData = { x: 0, z: 0, active: false };
-        let isActionActive = false; 
-        let currentMode = 'combat'; 
-        let exCount = 0; let atkCount = 0; let cafeTimer = null;
-
-        // --- AUDIO ENGINE ---
-        const GUN_NORMAL_FRAME = 5; 
-        const GUN_EX_FRAME = 12;
-
-        function playSound(id) {
-            const s = document.getElementById(id);
-            if(s) { s.pause(); s.currentTime = 0; s.play(); }
-        }
-
-        function playRandom(ids) {
-            const id = ids[Math.floor(Math.random() * ids.length)];
-            playSound(id);
-        }
-
-        function playGunSFX(type) {
-            const frame = (type === 'normal') ? GUN_NORMAL_FRAME : GUN_EX_FRAME;
-            const soundId = (type === 'normal') ? 'snd-gun-normal' : 'snd-gun-ex';
-            setTimeout(() => playSound(soundId), (frame / FPS) * 1000);
-        }
-
-        function startCafeVoice() {
-            if(cafeTimer) return;
-            cafeTimer = setInterval(() => {
-                if(currentMode === 'cafe' && !isActionActive) {
-                    playRandom(['snd-cafe-1', 'snd-cafe-2', 'snd-cafe-3', 'snd-cafe-4', 'snd-cafe-5']);
-                }
-            }, 15000);
-        }
-
         function showModel(type) {
             Object.keys(models).forEach(k => models[k].setAttribute('visible', k === type));
         }
 
-        // --- SWITCH LOGIC ---
-        switchBtn.addEventListener('click', function() {
-            if (isActionActive) return;
-            if (currentMode === 'combat') {
-                currentMode = 'cafe'; actionBtn.innerText = 'I'; exBtn.style.display = 'none'; 
-                showModel('cIdle'); startCafeVoice();
-            } else {
-                currentMode = 'combat'; actionBtn.innerText = 'A'; exBtn.style.display = 'flex'; 
-                showModel('idle'); clearInterval(cafeTimer); cafeTimer = null;
-            }
-        });
+        function stopSound(id) {
+            const s = document.getElementById(id);
+            if(s) { s.pause(); s.currentTime = 0; }
+        }
 
-        // --- ACTION LOGIC ---
+        function playSound(id, loop = false) {
+            const s = document.getElementById(id);
+            if(s) {
+                s.pause(); s.currentTime = 0;
+                s.loop = loop;
+                s.play().catch(e => console.log("Audio play blocked"));
+            }
+        }
+
+        function triggerGunSFX(mode) {
+            const frame = (mode === 'normal') ? SOUND_TIMING.normalGunFrame : SOUND_TIMING.exGunFrame;
+            const id = (mode === 'normal') ? 'snd-gun-normal' : 'snd-gun-ex';
+            clearTimeout(gunDelayTimeout);
+            gunDelayTimeout = setTimeout(() => {
+                if(isActionActive) playSound(id, (mode === 'normal'));
+            }, (frame / FPS) * 1000);
+        }
+
+        // --- FIXED CAFE VOICE LOGIC ---
+        function startCafeVoice() {
+            if(cafeTimer) clearInterval(cafeTimer);
+            // Thiết lập vòng lặp 15s
+            cafeTimer = setInterval(() => {
+                // Chỉ chạy nếu đang ở chế độ cafe và Aris không bận diễn animation đặc biệt
+                if(currentMode === 'cafe' && !isActionActive) {
+                    const voiceIds = ['snd-cafe-1', 'snd-cafe-2', 'snd-cafe-3', 'snd-cafe-4', 'snd-cafe-5'];
+                    // Bốc thăm 1 cái bất kỳ trong mỗi lần lặp
+                    const pick = voiceIds[Math.floor(Math.random() * voiceIds.length)];
+                    
+                    // Dừng tất cả các câu thoại cafe khác trước khi nói câu mới để tránh chồng tiếng
+                    voiceIds.forEach(id => stopSound(id));
+                    
+                    playSound(pick);
+                }
+            }, 15000);
+        }
+
         function onActionStart(e) {
             if (e.cancelable) e.preventDefault();
             if (isActionActive) return;
-            isActionActive = true; moveData.active = false;
+            isActionActive = true;
             if (currentMode === 'combat') {
-                atkCount++; actionBtn.classList.add('active-combat'); showModel('atkStart'); playGunSFX('normal');
-                if(atkCount % 3 === 0) playRandom(['snd-shout-1', 'snd-shout-2', 'snd-shout-3']);
-                models.atkStart.removeAttribute('animation-mixer');
+                atkCount++;
+                actionBtn.classList.add('active-combat');
+                showModel('atkStart');
+                triggerGunSFX('normal');
+                if(atkCount % 3 === 0) {
+                    const shouts = ['snd-shout-1', 'snd-shout-2', 'snd-shout-3'];
+                    playSound(shouts[Math.floor(Math.random() * shouts.length)]);
+                }
                 models.atkStart.setAttribute('animation-mixer', {clip: '*', loop: 'once', clampWhenFinished: true});
             } else {
-                actionBtn.classList.add('active-cafe'); showModel('cInter');
-                models.cInter.removeAttribute('animation-mixer');
+                actionBtn.classList.add('active-cafe');
+                showModel('cInter');
                 models.cInter.setAttribute('animation-mixer', {clip: '*', loop: 'once', clampWhenFinished: true});
+            }
+        }
+
+        function onActionEnd() {
+            actionBtn.classList.remove('active-combat', 'active-cafe');
+            if (currentMode === 'combat' && isActionActive && models.atkMid.getAttribute('visible')) {
+                isActionActive = false;
+                stopSound('snd-gun-normal'); 
+                showModel('atkEnd');
+                models.atkEnd.setAttribute('animation-mixer', {clip: '*', loop: 'once', clampWhenFinished: true});
             }
         }
 
         function onEXStart(e) {
             if (e.cancelable) e.preventDefault();
             if (isActionActive) return;
-            isActionActive = true; moveData.active = false; exCount++;
-            exBtn.classList.add('active-ex'); showModel('ex'); playGunSFX('ex');
-            if(exCount % 2 !== 0) playRandom(['snd-ex-v1', 'snd-ex-v2', 'snd-ex-v3', 'snd-ex-l1', 'snd-ex-l2', 'snd-ex-l3']);
-            models.ex.removeAttribute('animation-mixer');
+            isActionActive = true;
+            exCount++;
+            exBtn.classList.add('active-ex');
+            showModel('ex');
+            triggerGunSFX('ex');
+            if(exCount % 2 !== 0) {
+                const voices = ['snd-ex-v1', 'snd-ex-v2', 'snd-ex-v3', 'snd-ex-l1', 'snd-ex-l2', 'snd-ex-l3'];
+                playSound(voices[Math.floor(Math.random() * voices.length)]);
+            }
             models.ex.setAttribute('animation-mixer', {clip: '*', loop: 'once', clampWhenFinished: true});
         }
 
-        window.addEventListener('mouseup', () => {
-            actionBtn.classList.remove('active-combat', 'active-cafe');
-            if (currentMode === 'combat' && isActionActive && models.atkMid.getAttribute('visible')) {
-                isActionActive = false; showModel('atkEnd');
-                models.atkEnd.removeAttribute('animation-mixer');
-                models.atkEnd.setAttribute('animation-mixer', {clip: '*', loop: 'once', clampWhenFinished: true});
+        actionBtn.addEventListener('mousedown', onActionStart);
+        actionBtn.addEventListener('touchstart', onActionStart);
+        window.addEventListener('mouseup', onActionEnd);
+        window.addEventListener('touchend', (e) => { if(e.target === actionBtn) onActionEnd(); });
+        exBtn.addEventListener('mousedown', onEXStart);
+        exBtn.addEventListener('touchstart', onEXStart);
+
+        models.atkStart.addEventListener('animation-finished', () => { if(isActionActive) showModel('atkMid'); });
+        models.ex.addEventListener('animation-finished', () => { isActionActive = false; exBtn.classList.remove('active-ex'); showModel('idle'); });
+        models.cInter.addEventListener('animation-finished', () => { isActionActive = false; showModel('cIdle'); });
+
+        document.getElementById('switch-btn').addEventListener('click', () => {
+            if (isActionActive) return;
+            if (currentMode === 'combat') {
+                currentMode = 'cafe'; actionBtn.innerText = 'I'; exBtn.style.display = 'none';
+                showModel('cIdle');
+                startCafeVoice(); // Bắt đầu đếm 15s cho cafe
+            } else {
+                currentMode = 'combat'; actionBtn.innerText = 'A'; exBtn.style.display = 'flex';
+                showModel('idle');
+                clearInterval(cafeTimer); cafeTimer = null; // Tắt cafe voice
             }
         });
 
-        // Anim Finish Listeners
-        models.atkStart.addEventListener('animation-finished', () => { if (isActionActive) showModel('atkMid'); });
-        models.atkEnd.addEventListener('animation-finished', () => { if (!isActionActive && !moveData.active) showModel('idle'); });
-        models.ex.addEventListener('animation-finished', () => { 
-            isActionActive = false; exBtn.classList.remove('active-ex'); 
-            if (!moveData.active) showModel(currentMode === 'combat' ? 'idle' : 'cIdle'); 
-        });
-        models.cInter.addEventListener('animation-finished', () => { isActionActive = false; if (!moveData.active) showModel('cIdle'); });
-
-        actionBtn.addEventListener('touchstart', onActionStart); actionBtn.addEventListener('mousedown', onActionStart);
-        exBtn.addEventListener('touchstart', onEXStart); exBtn.addEventListener('mousedown', onEXStart);
-
-        // --- JOYSTICK ---
         const manager = nipplejs.create({zone: document.getElementById('joystick-zone'), mode: 'static', position: {left: '70px', bottom: '70px'}, color: 'cyan'});
-        manager.on('move', (evt, data) => {
-            if (isActionActive) return; moveData.active = true; moveData.x = data.vector.x; moveData.z = -data.vector.y;
+        let moveData = { x: 0, z: 0, active: false };
+        manager.on('move', (evt, data) => { 
+            if (isActionActive) return; moveData.active = true; moveData.x = data.vector.x; moveData.z = -data.vector.y; 
             showModel(currentMode === 'combat' ? 'walk' : 'cWalk');
         });
-        manager.on('end', () => {
-            moveData.active = false;
-            if (!isActionActive) {
-                if (currentMode === 'combat') {
-                    showModel('stop'); models.stop.removeAttribute('animation-mixer');
-                    models.stop.setAttribute('animation-mixer', {clip: '*', loop: 'once', clampWhenFinished: true});
-                    setTimeout(() => { if (!moveData.active && !isActionActive) showModel('idle'); }, STOP_DURATION_MS);
-                } else showModel('cIdle');
-            }
+        manager.on('end', () => { 
+            moveData.active = false; 
+            if(!isActionActive) showModel(currentMode === 'combat' ? 'idle' : 'cIdle'); 
         });
 
         function update() {
             if (moveData.active && !isActionActive) {
                 const speed = (currentMode === 'cafe') ? 0.005 : 0.05;
-                let currPos = root.getAttribute('position');
+                let currPos = document.getElementById('aris-root').getAttribute('position');
                 currPos.x += moveData.x * speed; currPos.z += moveData.z * speed;
-                root.setAttribute('position', currPos);
-                rotWrapper.setAttribute('rotation', `0 ${Math.atan2(moveData.x, moveData.z) * (180 / Math.PI)} 0`);
+                document.getElementById('aris-root').setAttribute('position', currPos);
+                document.getElementById('aris-rotation').setAttribute('rotation', `0 ${Math.atan2(moveData.x, moveData.z) * 180 / Math.PI} 0`);
             }
             requestAnimationFrame(update);
         }
