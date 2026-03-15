@@ -2,7 +2,7 @@
 <html>
 <head>
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Aris AR - Battle Mode</title>
+    <title>Aris AR - Final Master Edition</title>
     <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
     <script src="https://cdn.jsdelivr.net/gh/donmccurdy/aframe-extras@v7.0.0/dist/aframe-extras.min.js"></script>
@@ -12,40 +12,50 @@
         body { margin: 0; overflow: hidden; touch-action: none; background: #000; }
         #joystick-zone { position: fixed; bottom: 30px; left: 30px; width: 150px; height: 150px; z-index: 3000; }
         
-        #attack-btn {
+        /* Nút Hành động chính */
+        #action-btn {
             position: fixed; bottom: 60px; right: 60px; width: 85px; height: 85px;
-            background: rgba(255, 255, 255, 0.15); 
-            border: 5px solid #fff; 
-            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.15); border: 5px solid #fff; border-radius: 50%;
             color: white; font-size: 35px; font-weight: bold; z-index: 3000;
             display: flex; align-items: center; justify-content: center;
             user-select: none; -webkit-tap-highlight-color: transparent;
-            box-shadow: 0 0 15px rgba(0,0,0,0.5);
-            transition: all 0.1s ease; /* Thêm transition cho mượt */
+            box-shadow: 0 0 15px rgba(0,0,0,0.5); transition: all 0.2s;
         }
+        /* Hiệu ứng Combat (Xanh dương) */
+        #action-btn.combat-active { background: rgba(78, 160, 238, 0.6); border-color: #4ea0ee; box-shadow: 0 0 25px #4ea0ee; transform: scale(0.9); }
+        /* Hiệu ứng Cafe (Cam) */
+        #action-btn.cafe-active { background: rgba(255, 165, 0, 0.6); border-color: #ffa500; box-shadow: 0 0 25px #ffa500; transform: scale(0.9); }
 
-        /* Class khi nhấn giữ nút bắn */
-        #attack-btn.active-btn { 
-            background: rgba(78, 160, 238, 0.6); /* Màu #4ea0ee với độ trong suốt */
-            border-color: #4ea0ee;
-            box-shadow: 0 0 25px #4ea0ee; /* Hiệu ứng phát sáng */
-            transform: scale(0.9);
+        /* Nút Chuyển Dạng S */
+        #switch-btn {
+            position: fixed; bottom: 160px; right: 75px; width: 55px; height: 55px;
+            background: rgba(0, 0, 0, 0.5); border: 3px solid #fff; border-radius: 12px;
+            color: white; font-size: 20px; font-weight: bold; z-index: 3000;
+            display: flex; align-items: center; justify-content: center;
+            user-select: none; -webkit-tap-highlight-color: transparent;
         }
+        #switch-btn:active { transform: scale(0.8); background: #4ea0ee; }
     </style>
 </head>
 
 <body>
     <div id="joystick-zone"></div>
-    <div id="attack-btn">A</div>
+    <div id="switch-btn">S</div>
+    <div id="action-btn">A</div>
 
     <a-scene 
-        mindar-image="imageTargetSrc: targets.mind; missTolerance: 10000; stayVisible: true; filterMinCF: 0.0001; filterBeta: 0.001;" 
-        renderer="colorManagement: true; antialias: true;" vr-mode-ui="enabled: false" device-orientation-permission-ui="enabled: false">
+        mindar-image="imageTargetSrc: targets.mind; stayVisible: true; filterMinCF: 0.0001; filterBeta: 0.001;" 
+        renderer="colorManagement: true; antialias: true;" 
+        vr-mode-ui="enabled: false" device-orientation-permission-ui="enabled: false">
 
         <a-assets>
             <a-asset-item id="mIdle" src="Movement/Walk_Idle.glb"></a-asset-item>
             <a-asset-item id="mWalk" src="Movement/Walk.glb"></a-asset-item>
             <a-asset-item id="mStop" src="Movement/Walk_Stop.glb"></a-asset-item>
+            
+            <a-asset-item id="cIdle" src="Cafe/Walk_Cafe_Idle.glb"></a-asset-item>
+            <a-asset-item id="cWalk" src="Cafe/Walk_Cafe_Go.glb"></a-asset-item>
+            <a-asset-item id="cInter" src="Cafe/Walk_Cafe_Inter.glb"></a-asset-item>
             
             <a-asset-item id="aStart" src="Normal_Attack/Start.glb"></a-asset-item>
             <a-asset-item id="aMid" src="Normal_Attack/Mid.glb"></a-asset-item>
@@ -57,14 +67,24 @@
 
         <a-entity mindar-image-target="targetIndex: 0">
             <a-entity id="aris-root" position="0 -0.8 0.01">
-                <a-entity id="aris-rotation" rotation="0 0 0">
-                    <a-gltf-model id="arisIdle" src="#mIdle" scale="0.3 0.3 0.3" visible="true" animation-mixer></a-gltf-model>
-                    <a-gltf-model id="arisWalk" src="#mWalk" scale="0.3 0.3 0.3" visible="false" animation-mixer></a-gltf-model>
-                    <a-gltf-model id="arisStop" src="#mStop" scale="0.3 0.3 0.3" visible="false"></a-gltf-model>
+                <a-entity id="aris-rotation">
                     
+                    <a-entity id="group-combat">
+                        <a-gltf-model id="arisIdle" src="#mIdle" scale="0.3 0.3 0.3" animation-mixer></a-gltf-model>
+                        <a-gltf-model id="arisWalk" src="#mWalk" scale="0.3 0.3 0.3" visible="false" animation-mixer></a-gltf-model>
+                        <a-gltf-model id="arisStop" src="#mStop" scale="0.3 0.3 0.3" visible="false"></a-gltf-model>
+                    </a-entity>
+
+                    <a-entity id="group-cafe" visible="false">
+                        <a-gltf-model id="cafeIdle" src="#cIdle" scale="0.3 0.3 0.3" animation-mixer></a-gltf-model>
+                        <a-gltf-model id="cafeWalk" src="#cWalk" scale="0.3 0.3 0.3" visible="false" animation-mixer></a-gltf-model>
+                        <a-gltf-model id="cafeInter" src="#cInter" scale="0.3 0.3 0.3" visible="false"></a-gltf-model>
+                    </a-entity>
+
                     <a-gltf-model id="arisAtkStart" src="#aStart" scale="0.3 0.3 0.3" visible="false"></a-gltf-model>
                     <a-gltf-model id="arisAtkMid" src="#aMid" scale="0.3 0.3 0.3" visible="false" animation-mixer></a-gltf-model>
                     <a-gltf-model id="arisAtkEnd" src="#aEnd" scale="0.3 0.3 0.3" visible="false"></a-gltf-model>
+
                 </a-entity>
             </a-entity>
         </a-entity>
@@ -73,93 +93,121 @@
     <script>
         const root = document.querySelector('#aris-root');
         const rotWrapper = document.querySelector('#aris-rotation');
+        const actionBtn = document.getElementById('action-btn');
+
         const models = {
-            idle: document.querySelector('#arisIdle'),
-            walk: document.querySelector('#arisWalk'),
-            stop: document.querySelector('#arisStop'),
-            atkStart: document.querySelector('#arisAtkStart'),
-            atkMid: document.querySelector('#arisAtkMid'),
-            atkEnd: document.querySelector('#arisAtkEnd')
+            combat: { idle: document.querySelector('#arisIdle'), walk: document.querySelector('#arisWalk'), stop: document.querySelector('#arisStop'), group: document.querySelector('#group-combat') },
+            cafe: { idle: document.querySelector('#cafeIdle'), walk: document.querySelector('#cafeWalk'), inter: document.querySelector('#cafeInter'), group: document.querySelector('#group-cafe') },
+            atk: { start: document.querySelector('#arisAtkStart'), mid: document.querySelector('#arisAtkMid'), end: document.querySelector('#arisAtkEnd') }
         };
 
+        let currentMode = 'combat'; 
         let moveData = { x: 0, z: 0, active: false };
-        let isAttacking = false;
+        let isPerforming = false; 
 
-        function showModel(type) {
-            Object.keys(models).forEach(k => {
-                models[k].setAttribute('visible', k === type);
-            });
+        function showModel(state) {
+            // Ẩn tất cả model con
+            [models.combat.idle, models.combat.walk, models.combat.stop, 
+             models.cafe.idle, models.cafe.walk, models.cafe.inter,
+             models.atk.start, models.atk.mid, models.atk.end].forEach(m => m.setAttribute('visible', false));
+
+            // Quản lý hiển thị Group cha
+            models.combat.group.setAttribute('visible', currentMode === 'combat' && !isPerforming);
+            models.cafe.group.setAttribute('visible', currentMode === 'cafe' && !isPerforming);
+
+            if (isPerforming) {
+                if (currentMode === 'combat') {
+                    models.atk[state].setAttribute('visible', true);
+                } else {
+                    models.cafe.inter.setAttribute('visible', true);
+                }
+            } else {
+                models[currentMode][state].setAttribute('visible', true);
+            }
         }
 
-        // --- CHUỖI ANIMATION ---
-        models.stop.addEventListener('animation-finished', () => {
-            if (!moveData.active && !isAttacking) showModel('idle');
+        // --- NÚT SWITCH (S) ---
+        document.getElementById('switch-btn').addEventListener('click', () => {
+            if (isPerforming) return;
+            currentMode = (currentMode === 'combat') ? 'cafe' : 'combat';
+            actionBtn.innerText = (currentMode === 'cafe') ? 'I' : 'A';
+            showModel('idle');
         });
 
-        models.atkStart.addEventListener('animation-finished', () => {
-            if (isAttacking) showModel('atkMid');
-        });
-
-        models.atkEnd.addEventListener('animation-finished', () => {
-            if (!isAttacking && !moveData.active) showModel('idle');
+        // --- ANIMATION EVENTS ---
+        models.combat.stop.addEventListener('animation-finished', () => { if (!moveData.active && !isPerforming) showModel('idle'); });
+        models.atk.start.addEventListener('animation-finished', () => { if (isPerforming) showModel('mid'); });
+        models.atk.end.addEventListener('animation-finished', () => { if (!isPerforming && !moveData.active) showModel('idle'); });
+        
+        models.cafe.inter.addEventListener('animation-finished', () => {
+            if (currentMode === 'cafe') {
+                isPerforming = false;
+                showModel('idle');
+            }
         });
 
         // --- JOYSTICK ---
-        const manager = nipplejs.create({
-            zone: document.getElementById('joystick-zone'),
-            mode: 'static', position: {left: '75px', bottom: '75px'}, color: 'cyan'
+        const manager = nipplejs.create({ 
+            zone: document.getElementById('joystick-zone'), 
+            mode: 'static', position: {left: '75px', bottom: '75px'}, color: 'cyan' 
         });
 
         manager.on('move', (evt, data) => {
-            if (isAttacking) return;
+            if (isPerforming) return;
             moveData.active = true;
-            moveData.x = data.vector.x;
+            moveData.x = data.vector.x; 
             moveData.z = -data.vector.y;
             showModel('walk');
         });
 
         manager.on('end', () => {
             moveData.active = false;
-            if (!isAttacking) {
-                showModel('stop');
-                models.stop.removeAttribute('animation-mixer');
-                models.stop.setAttribute('animation-mixer', {clip: '*', loop: 'once', clampWhenFinished: true});
+            if (!isPerforming) {
+                if (currentMode === 'combat') {
+                    showModel('stop');
+                    models.combat.stop.removeAttribute('animation-mixer');
+                    models.combat.stop.setAttribute('animation-mixer', {clip: '*', loop: 'once', clampWhenFinished: true});
+                } else { showModel('idle'); }
             }
         });
 
-        // --- NÚT A (ATTACK) ---
-        const btn = document.getElementById('attack-btn');
-        
-        btn.addEventListener('touchstart', (e) => {
+        // --- HÀNH ĐỘNG (ATTACK / INTERACT) ---
+        actionBtn.addEventListener('touchstart', (e) => {
             e.preventDefault();
-            btn.classList.add('active-btn'); // Hiện màu xanh
-            
-            if (isAttacking) return;
-            isAttacking = true;
+            if (isPerforming) return;
+            isPerforming = true; 
             moveData.active = false;
 
-            showModel('atkStart');
-            models.atkStart.removeAttribute('animation-mixer');
-            models.atkStart.setAttribute('animation-mixer', {clip: '*', loop: 'once', clampWhenFinished: true});
+            if (currentMode === 'combat') {
+                actionBtn.classList.add('combat-active');
+                showModel('start');
+                models.atk.start.removeAttribute('animation-mixer');
+                models.atk.start.setAttribute('animation-mixer', {clip: '*', loop: 'once', clampWhenFinished: true});
+            } else {
+                actionBtn.classList.add('cafe-active');
+                showModel('inter');
+                models.cafe.inter.removeAttribute('animation-mixer');
+                models.cafe.inter.setAttribute('animation-mixer', {clip: '*', loop: 'once', clampWhenFinished: true});
+            }
         });
 
-        btn.addEventListener('touchend', (e) => {
+        actionBtn.addEventListener('touchend', (e) => {
             e.preventDefault();
-            btn.classList.remove('active-btn'); // Tắt màu xanh
+            actionBtn.classList.remove('combat-active', 'cafe-active');
             
-            if (!isAttacking) return;
-            isAttacking = false;
-
-            showModel('atkEnd');
-            models.atkEnd.removeAttribute('animation-mixer');
-            models.atkEnd.setAttribute('animation-mixer', {clip: '*', loop: 'once', clampWhenFinished: true});
+            if (currentMode === 'combat' && isPerforming) {
+                isPerforming = false;
+                showModel('end');
+                models.atk.end.removeAttribute('animation-mixer');
+                models.atk.end.setAttribute('animation-mixer', {clip: '*', loop: 'once', clampWhenFinished: true});
+            }
         });
 
         // --- GAME LOOP ---
         function update() {
-            if (moveData.active && !isAttacking) {
+            if (moveData.active && !isPerforming) {
                 let currPos = root.getAttribute('position');
-                currPos.x += moveData.x * 0.05;
+                currPos.x += moveData.x * 0.05; 
                 currPos.z += moveData.z * 0.05;
                 root.setAttribute('position', currPos);
                 
