@@ -96,7 +96,7 @@
 
     <script>
         const FPS = 24;
-        const LOOP_SYNC_SEC = 17 / FPS; // 0.708s
+        const LOOP_SYNC_SEC = 17 / FPS; // Giây thứ 0.708 (Frame 17)
         const SOUND_TIMING = { normalGunFrame: 5, exGunFrame: 12 };
         const STOP_DURATION_MS = (48 / FPS) * 1000;
 
@@ -128,7 +128,10 @@
             const id = (mode === 'normal') ? 'snd-gun-normal' : 'snd-gun-ex';
             clearTimeout(gunDelayTimeout);
             gunDelayTimeout = setTimeout(() => { 
-                if(isActionActive) playSound(id, (mode === 'ex')); // Normal: non-loop, EX: loop
+                if(isActionActive) {
+                    // CỰC QUAN TRỌNG: Normal không để loop để update() tự sync, EX để loop
+                    playSound(id, (mode === 'ex')); 
+                }
             }, (frame / FPS) * 1000);
         }
 
@@ -162,7 +165,7 @@
 
         function onActionEnd() {
             actionBtn.classList.remove('active-combat', 'active-cafe');
-            if (currentMode === 'combat' && isActionActive && models.atkMid.getAttribute('visible')) {
+            if (currentMode === 'combat' && isActionActive && (models.atkMid.getAttribute('visible') === 'true' || models.atkStart.getAttribute('visible') === 'true')) {
                 isActionActive = false; stopSound('snd-gun-normal'); showModel('atkEnd');
                 models.atkEnd.removeAttribute('animation-mixer');
                 models.atkEnd.setAttribute('animation-mixer', {clip: '*', loop: 'once', clampWhenFinished: true});
@@ -183,7 +186,7 @@
         window.addEventListener('mouseup', onActionEnd); window.addEventListener('touchend', (e) => { if(e.target === actionBtn) onActionEnd(); });
         exBtn.addEventListener('touchstart', onEXStart); exBtn.addEventListener('mousedown', onEXStart);
 
-        models.atkStart.addEventListener('animation-finished', () => { if(isActionActive) showModel('atkMid'); });
+        models.atkStart.addEventListener('animation-finished', () => { if(isActionActive) { showModel('atkMid'); lastMidTime = 0; } });
         models.atkEnd.addEventListener('animation-finished', () => { if(!isActionActive && !moveData.active) showModel('idle'); });
         models.ex.addEventListener('animation-finished', () => { isActionActive = false; exBtn.classList.remove('active-ex'); stopSound('snd-gun-ex'); showModel(currentMode === 'combat' ? 'idle' : 'cIdle'); });
         models.cInter.addEventListener('animation-finished', () => { isActionActive = false; showModel('cIdle'); });
@@ -222,12 +225,13 @@
                 rotWrapper.setAttribute('rotation', `0 ${Math.atan2(moveData.x, moveData.z) * (180 / Math.PI)} 0`);
             }
 
-            // ĐẮP THÊM: Logic Sync Frame 17 cho model Mid
+            // ĐẮP THÊM: Logic Sync âm thanh chuẩn
             if (isActionActive && models.atkMid.getAttribute('visible') === 'true') {
                 const mixer = models.atkMid.components['animation-mixer'].mixer;
                 if (mixer && mixer._actions[0]) {
                     let cur = mixer._actions[0].time;
-                    if (cur < lastMidTime) { // Vừa lặp lại loop mới
+                    if (cur < lastMidTime) { // Animation vừa lặp lại loop mới
+                        sndNormal.pause();
                         sndNormal.currentTime = LOOP_SYNC_SEC;
                         sndNormal.play().catch(()=>{});
                     }
