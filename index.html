@@ -2,7 +2,7 @@
 <html>
 <head>
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Aris AR - The Ultimate Flat Core</title>
+    <title>Aris AR - Full Features Master</title>
     <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
     <script src="https://cdn.jsdelivr.net/gh/donmccurdy/aframe-extras@v7.0.0/dist/aframe-extras.min.js"></script>
@@ -12,7 +12,6 @@
         body { margin: 0; overflow: hidden; touch-action: none; background: #000; }
         #joystick-zone { position: fixed; bottom: 30px; left: 30px; width: 150px; height: 150px; z-index: 3000; }
         
-        /* Nút Hành Động (Giao diện tĩnh) */
         #action-btn {
             position: fixed; bottom: 60px; right: 60px; width: 85px; height: 85px;
             background: rgba(255, 255, 255, 0.15); border: 5px solid #fff; border-radius: 50%;
@@ -22,11 +21,20 @@
             box-shadow: 0 0 15px rgba(0,0,0,0.5); transition: all 0.1s;
         }
 
-        /* YÊU CẦU: Hiệu ứng Glow khi NHẤN GIỮ */
-        #action-btn.active-combat { background: rgba(78, 160, 238, 0.6); border-color: #4ea0ee; box-shadow: 0 0 25px #4ea0ee; transform: scale(0.9); }
-        #action-btn.active-cafe { background: rgba(255, 165, 0, 0.6); border-color: #ffa500; box-shadow: 0 0 25px #ffa500; transform: scale(0.9); }
+        /* Hiệu ứng Glow khi nhấn giữ */
+        #action-btn.active-combat { 
+            background: rgba(78, 160, 238, 0.6); 
+            border-color: #4ea0ee; 
+            box-shadow: 0 0 25px #4ea0ee; 
+            transform: scale(0.9); 
+        }
+        #action-btn.active-cafe { 
+            background: rgba(255, 165, 0, 0.6); 
+            border-color: #ffa500; 
+            box-shadow: 0 0 25px #ffa500; 
+            transform: scale(0.9); 
+        }
 
-        /* Nút chuyển đổi Mode (S) */
         #switch-btn {
             position: fixed; bottom: 160px; right: 75px; width: 55px; height: 55px;
             background: rgba(0, 0, 0, 0.5); border: 3px solid #fff; border-radius: 12px;
@@ -67,7 +75,6 @@
         <a-entity mindar-image-target="targetIndex: 0">
             <a-entity id="aris-root" position="0 -0.8 0.01">
                 <a-entity id="aris-rotation" rotation="0 0 0">
-                    
                     <a-gltf-model id="arisIdle" src="#mIdle" scale="0.3 0.3 0.3" visible="true" animation-mixer></a-gltf-model>
                     <a-gltf-model id="arisWalk" src="#mWalk" scale="0.3 0.3 0.3" visible="false" animation-mixer></a-gltf-model>
                     <a-gltf-model id="arisStop" src="#mStop" scale="0.3 0.3 0.3" visible="false"></a-gltf-model>
@@ -85,9 +92,9 @@
     </a-scene>
 
     <script>
-        // --- YÊU CẦU: CUSTOM FRAME STOP ---
+        // Cấu hình Frame cho Walk_Stop
         const FPS = 24;
-        const TARGET_STOP_FRAME = 48; // Sửa số frame bạn muốn dừng tại đây
+        const TARGET_STOP_FRAME = 48; 
         const STOP_DURATION_MS = (TARGET_STOP_FRAME / FPS) * 1000;
 
         const root = document.querySelector('#aris-root');
@@ -111,14 +118,15 @@
         let isActionActive = false; 
         let currentMode = 'combat'; 
 
+        // Hàm hiển thị model (Cấu trúc phẳng - Fix lỗi mất Aris)
         function showModel(type) {
             Object.keys(models).forEach(k => {
                 models[k].setAttribute('visible', k === type);
             });
         }
 
-        // --- NÚT ĐỔI TRẠNG THÁI (S) ---
-        switchBtn.addEventListener('click', () => {
+        // Chuyển Mode (S)
+        switchBtn.addEventListener('click', function() {
             if (isActionActive) return; 
             if (currentMode === 'combat') {
                 currentMode = 'cafe';
@@ -131,29 +139,31 @@
             }
         });
 
-        // --- XỬ LÝ CHUỖI ANIMATION NỐI TIẾP ---
-        models.atkStart.addEventListener('animation-finished', () => {
+        // Xử lý chuỗi Animation
+        models.atkStart.addEventListener('animation-finished', function() {
             if (isActionActive) showModel('atkMid');
         });
 
-        models.atkEnd.addEventListener('animation-finished', () => {
+        models.atkEnd.addEventListener('animation-finished', function() {
             if (!isActionActive && !moveData.active) showModel('idle');
         });
 
-        models.cInter.addEventListener('animation-finished', () => {
+        models.cInter.addEventListener('animation-finished', function() {
             if (currentMode === 'cafe') {
                 isActionActive = false;
                 if (!moveData.active) showModel('cIdle');
             }
         });
 
-        // --- JOYSTICK ---
+        // Joystick
         const manager = nipplejs.create({
             zone: document.getElementById('joystick-zone'),
-            mode: 'static', position: {left: '75px', bottom: '75px'}, color: 'cyan'
+            mode: 'static', 
+            position: {left: '75px', bottom: '75px'}, 
+            color: 'cyan'
         });
 
-        manager.on('move', (evt, data) => {
+        manager.on('move', function(evt, data) {
             if (isActionActive) return;
             moveData.active = true;
             moveData.x = data.vector.x;
@@ -161,7 +171,7 @@
             showModel(currentMode === 'combat' ? 'walk' : 'cWalk');
         });
 
-        manager.on('end', () => {
+        manager.on('end', function() {
             moveData.active = false;
             if (!isActionActive) {
                 if (currentMode === 'combat') {
@@ -169,8 +179,8 @@
                     models.stop.removeAttribute('animation-mixer');
                     models.stop.setAttribute('animation-mixer', {clip: '*', loop: 'once', clampWhenFinished: true});
                     
-                    // Logic tính thời gian lùi về Idle theo Custom Frame
-                    setTimeout(() => {
+                    // Quay về Idle sau khi hết frame quy định
+                    setTimeout(function() {
                         if (!moveData.active && !isActionActive) showModel('idle');
                     }, STOP_DURATION_MS);
                 } else {
@@ -179,14 +189,13 @@
             }
         });
 
-        // --- NÚT HÀNH ĐỘNG (A/I) ---
-        actionBtn.addEventListener('touchstart', (e) => {
+        // Nút Tương tác (A/I)
+        actionBtn.addEventListener('touchstart', function(e) {
             e.preventDefault();
             if (isActionActive) return;
             isActionActive = true;
             moveData.active = false; 
 
-            // Logic phát sáng GLOW màu tương ứng
             if (currentMode === 'combat') {
                 actionBtn.classList.add('active-combat');
                 showModel('atkStart');
@@ -200,11 +209,9 @@
             }
         });
 
-        actionBtn.addEventListener('touchend', (e) => {
+        actionBtn.addEventListener('touchend', function(e) {
             e.preventDefault();
-            // Tắt hiệu ứng GLOW khi nhả tay
             actionBtn.classList.remove('active-combat', 'active-cafe');
-
             if (!isActionActive) return;
             
             if (currentMode === 'combat') {
@@ -215,12 +222,15 @@
             }
         });
 
-        // --- GAME LOOP ---
+        // Vòng lặp Game
         function update() {
             if (moveData.active && !isActionActive) {
+                // Tốc độ Cafe 1/2 so với Walk (0.05 / 2 = 0.025)
+                const speed = (currentMode === 'cafe') ? 0.025 : 0.05;
+
                 let currPos = root.getAttribute('position');
-                currPos.x += moveData.x * 0.05;
-                currPos.z += moveData.z * 0.05;
+                currPos.x += moveData.x * speed;
+                currPos.z += moveData.z * speed;
                 root.setAttribute('position', currPos);
                 
                 let angleDeg = Math.atan2(moveData.x, moveData.z) * (180 / Math.PI);
