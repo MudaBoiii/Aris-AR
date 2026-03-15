@@ -238,7 +238,7 @@
         // --- GAME LOOP ---
         function update() {
             if (moveData.active && !isActionActive) {
-                const speed = (currentMode === 'cafe') ? 0.025 : 0.05;
+                const speed = (currentMode === 'cafe') ? 0.005 : 0.05;
                 let currPos = root.getAttribute('position');
                 currPos.x += moveData.x * speed;
                 currPos.z += moveData.z * speed;
