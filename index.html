@@ -2,7 +2,7 @@
 <html>
 <head>
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Aris AR - Cafe Action Fixed</title>
+    <title>Aris AR - Interactive Icons</title>
     <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
     <script src="https://cdn.jsdelivr.net/gh/donmccurdy/aframe-extras@v7.0.0/dist/aframe-extras.min.js"></script>
@@ -10,30 +10,74 @@
     <style>
         body { margin: 0; overflow: hidden; touch-action: none; background: #000; }
         #joystick-zone { position: fixed; bottom: 30px; left: 30px; width: 120px; height: 120px; z-index: 3000; }
+        
         .btn-action {
-            position: fixed; width: 75px; height: 75px; background: rgba(255, 255, 255, 0.15); 
-            border: 4px solid #fff; border-radius: 50%; color: white; font-weight: bold; z-index: 3000;
-            display: flex; align-items: center; justify-content: center; user-select: none;
-            -webkit-tap-highlight-color: transparent; transition: all 0.1s; cursor: pointer;
+            position: fixed; width: 75px; height: 75px; 
+            background: rgba(255, 255, 255, 0.2); 
+            border: 3px solid #fff; border-radius: 50%; 
+            z-index: 3000; display: flex; align-items: center; justify-content: center; 
+            user-select: none; -webkit-tap-highlight-color: transparent; 
+            transition: all 0.1s ease-out; cursor: pointer;
+            background-size: 70%; background-repeat: no-repeat; background-position: center;
+            filter: brightness(1); /* Trạng thái bình thường */
         }
-        #action-btn { bottom: 50px; right: 30px; font-size: 32px; } 
-        #ex-btn { bottom: 50px; right: 125px; font-size: 22px; }
-        #action-btn.active-combat { background: rgba(78, 160, 238, 0.6); border-color: #4ea0ee; box-shadow: 0 0 25px #4ea0ee; transform: scale(0.9); }
-        #action-btn.active-cafe { background: rgba(255, 165, 0, 0.6); border-color: #ffa500; box-shadow: 0 0 25px #ffa500; transform: scale(0.9); }
-        #ex-btn.active-ex { background: rgba(160, 32, 240, 0.6); border-color: #a020f0; box-shadow: 0 0 30px #a020f0; transform: scale(0.9); }
+
+        /* Icon Path */
+        #action-btn { bottom: 50px; right: 30px; width: 85px; height: 85px; }
+        .mode-combat-icon { background-image: url('Icon/Normal.png'); }
+        .mode-cafe-icon { background-image: url('Icon/Aris_Sticker.png'); background-size: 80%; }
+
+        #ex-btn { 
+            bottom: 60px; right: 135px; width: 65px; height: 65px; 
+            background-image: url('Icon/EX.png'); 
+        }
+
         #switch-btn {
-            position: fixed; bottom: 145px; right: 42px; width: 50px; height: 50px;
-            background: rgba(0, 0, 0, 0.5); border: 2px solid #fff; border-radius: 10px;
-            color: white; font-size: 18px; font-weight: bold; z-index: 3000;
-            display: flex; align-items: center; justify-content: center; cursor: pointer;
+            position: fixed; bottom: 155px; right: 45px; width: 55px; height: 55px;
+            background: rgba(0, 0, 0, 0.6); border: 2px solid #fff; border-radius: 12px;
+            z-index: 3000; cursor: pointer;
+            background-image: url('Icon/GDD.png');
+            background-size: 80%; background-repeat: no-repeat; background-position: center;
+            transition: all 0.1s;
+        }
+
+        /* HIỆU ỨNG ĐỘ SÁNG KHI NHẤN */
+        .btn-action:active, #switch-btn:active {
+            filter: brightness(1.5); /* Tăng độ sáng lên 150% */
+        }
+
+        #action-btn.active-combat { 
+            background-color: rgba(78, 160, 238, 0.6); 
+            transform: scale(0.9); 
+            box-shadow: 0 0 25px #4ea0ee;
+            filter: brightness(1.8); /* Riêng nút A khi giữ bắn sẽ sáng hơn nữa */
+        }
+        
+        #action-btn.active-cafe { 
+            background-color: rgba(255, 165, 0, 0.6); 
+            transform: scale(0.9); 
+            box-shadow: 0 0 25px #ffa500;
+            filter: brightness(1.5);
+        }
+
+        #ex-btn.active-ex { 
+            background-color: rgba(160, 32, 240, 0.6); 
+            transform: scale(0.9); 
+            box-shadow: 0 0 30px #a020f0;
+            filter: brightness(1.5);
+        }
+
+        #switch-btn:active {
+            transform: scale(0.95);
+            background-color: rgba(255, 255, 255, 0.3);
         }
     </style>
 </head>
 <body>
     <div id="joystick-zone"></div>
-    <div id="switch-btn">S</div>
-    <div id="ex-btn" class="btn-action">B</div>
-    <div id="action-btn" class="btn-action">A</div>
+    <div id="switch-btn"></div>
+    <div id="ex-btn" class="btn-action"></div>
+    <div id="action-btn" class="btn-action mode-combat-icon"></div>
 
     <a-scene mindar-image="imageTargetSrc: targets.mind; missTolerance: 10000; stayVisible: true;" renderer="colorManagement: true; antialias: true;" vr-mode-ui="enabled: false">
         <a-assets>
@@ -115,21 +159,18 @@
             cafeVoiceTimeout = setTimeout(autoCafeVoice, Math.floor(Math.random() * 10000) + 10000);
         }
 
-        // --- XỬ LÝ NHẤN NÚT A / I ---
         function onAStart(e) {
             if (e.cancelable) e.preventDefault();
             if (isActionActive || isEXRunning) return;
             if (stopTimer) { clearTimeout(stopTimer); stopTimer = null; }
 
             if (currentMode === 'combat') {
-                // CHẾ ĐỘ CHIẾN ĐẤU: GIỮ ĐỂ BẮN
                 isActionActive = true; moveData.active = false;
                 actionBtn.classList.add('active-combat'); showModel('atkStart');
                 setTimeout(() => { if(isActionActive) playSnd(sndNormal, true); }, 200);
                 models.atkStart.removeAttribute('animation-mixer');
                 models.atkStart.setAttribute('animation-mixer', {clip: '*', loop: 'once', clampWhenFinished: true});
             } else {
-                // CHẾ ĐỘ CAFE: CHẠM MỘT CÁI (GIỐNG EX)
                 isEXRunning = true; moveData.active = false;
                 actionBtn.classList.add('active-cafe'); showModel('cInter');
                 models.cInter.removeAttribute('animation-mixer');
@@ -138,7 +179,6 @@
         }
 
         function onAEnd() {
-            // Chỉ kết thúc nếu đang ở mode combat và đang giữ nút
             if (currentMode === 'combat' && isActionActive) {
                 isActionActive = false;
                 actionBtn.classList.remove('active-combat');
@@ -149,12 +189,10 @@
             }
         }
 
-        // --- NÚT B (CHẠM) ---
         function onEXClick(e) {
             if (e.cancelable) e.preventDefault();
             if (isActionActive || isEXRunning) return;
             if (stopTimer) { clearTimeout(stopTimer); stopTimer = null; }
-
             isEXRunning = true; moveData.active = false;
             exBtn.classList.add('active-ex'); showModel('ex');
             setTimeout(() => { if(isEXRunning) playSnd(sndEx, true); }, 500);
@@ -164,33 +202,34 @@
             models.ex.setAttribute('animation-mixer', {clip: '*', loop: 'once', clampWhenFinished: true});
         }
 
+        document.getElementById('switch-btn').addEventListener('click', () => {
+            if (isActionActive || isEXRunning) return;
+            currentMode = (currentMode === 'combat') ? 'cafe' : 'combat';
+            if (currentMode === 'combat') {
+                actionBtn.classList.replace('mode-cafe-icon', 'mode-combat-icon');
+                exBtn.style.display = 'flex';
+                showModel('idle');
+                clearTimeout(cafeVoiceTimeout);
+            } else {
+                actionBtn.classList.replace('mode-combat-icon', 'mode-cafe-icon');
+                exBtn.style.display = 'none';
+                showModel('cIdle');
+                autoCafeVoice();
+            }
+        });
+
         actionBtn.addEventListener('touchstart', onAStart); actionBtn.addEventListener('mousedown', onAStart);
         window.addEventListener('touchend', onAEnd); window.addEventListener('mouseup', onAEnd);
         exBtn.addEventListener('click', onEXClick);
 
-        // --- LISTENERS KẾT THÚC ANIMATION ---
         models.atkStart.addEventListener('animation-finished', () => { if(isActionActive) { showModel('atkMid'); lastMidTime = 0; } });
         models.atkEnd.addEventListener('animation-finished', () => { if(!isActionActive && !moveData.active) showModel('idle'); });
-        
         models.ex.addEventListener('animation-finished', () => { 
             isEXRunning = false; exBtn.classList.remove('active-ex'); stopSnd(sndEx);
             showModel(currentMode === 'combat' ? 'idle' : 'cIdle'); 
         });
-
-        // Tự động hồi phục sau khi chạm nút I trong Cafe
         models.cInter.addEventListener('animation-finished', () => { 
-            isEXRunning = false;
-            actionBtn.classList.remove('active-cafe');
-            showModel('cIdle');
-        });
-
-        document.getElementById('switch-btn').addEventListener('click', () => {
-            if (isActionActive || isEXRunning) return;
-            currentMode = (currentMode === 'combat') ? 'cafe' : 'combat';
-            actionBtn.innerText = (currentMode === 'combat') ? 'A' : 'I';
-            exBtn.style.display = (currentMode === 'combat') ? 'flex' : 'none';
-            showModel(currentMode === 'combat' ? 'idle' : 'cIdle');
-            if (currentMode === 'cafe') autoCafeVoice(); else clearTimeout(cafeVoiceTimeout);
+            isEXRunning = false; actionBtn.classList.remove('active-cafe'); showModel('cIdle');
         });
 
         const manager = nipplejs.create({zone: document.getElementById('joystick-zone'), mode: 'static', position: {left: '70px', bottom: '70px'}, color: 'cyan'});
@@ -220,7 +259,7 @@
             if (moveData.active && !isActionActive && !isEXRunning) {
                 const root = document.querySelector('#aris-root'), rot = document.querySelector('#aris-rotation');
                 let currPos = root.getAttribute('position');
-                let speed = currentMode === 'combat' ? 0.05 : 0.005;
+                let speed = currentMode === 'combat' ? 0.05 : 0.015;
                 currPos.x += moveData.x * speed; currPos.z += moveData.z * speed;
                 root.setAttribute('position', currPos);
                 rot.setAttribute('rotation', `0 ${Math.atan2(moveData.x, moveData.z) * 57.3} 0`);
