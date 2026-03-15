@@ -2,7 +2,7 @@
 <html>
 <head>
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Aris AR - Smooth Animation Fix</title>
+    <title>Aris AR - Cafe Action Fixed</title>
     <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
     <script src="https://cdn.jsdelivr.net/gh/donmccurdy/aframe-extras@v7.0.0/dist/aframe-extras.min.js"></script>
@@ -115,42 +115,44 @@
             cafeVoiceTimeout = setTimeout(autoCafeVoice, Math.floor(Math.random() * 10000) + 10000);
         }
 
-        // --- NÚT A (GIỮ) ---
+        // --- XỬ LÝ NHẤN NÚT A / I ---
         function onAStart(e) {
             if (e.cancelable) e.preventDefault();
             if (isActionActive || isEXRunning) return;
-            
             if (stopTimer) { clearTimeout(stopTimer); stopTimer = null; }
 
-            isActionActive = true; moveData.active = false;
             if (currentMode === 'combat') {
+                // CHẾ ĐỘ CHIẾN ĐẤU: GIỮ ĐỂ BẮN
+                isActionActive = true; moveData.active = false;
                 actionBtn.classList.add('active-combat'); showModel('atkStart');
                 setTimeout(() => { if(isActionActive) playSnd(sndNormal, true); }, 200);
+                models.atkStart.removeAttribute('animation-mixer');
+                models.atkStart.setAttribute('animation-mixer', {clip: '*', loop: 'once', clampWhenFinished: true});
             } else {
+                // CHẾ ĐỘ CAFE: CHẠM MỘT CÁI (GIỐNG EX)
+                isEXRunning = true; moveData.active = false;
                 actionBtn.classList.add('active-cafe'); showModel('cInter');
+                models.cInter.removeAttribute('animation-mixer');
+                models.cInter.setAttribute('animation-mixer', {clip: '*', loop: 'once', clampWhenFinished: true});
             }
-            const activeModel = currentMode === 'combat' ? models.atkStart : models.cInter;
-            activeModel.removeAttribute('animation-mixer');
-            activeModel.setAttribute('animation-mixer', {clip: '*', loop: 'once', clampWhenFinished: true});
         }
 
         function onAEnd() {
-            if (!isActionActive) return;
-            isActionActive = false;
-            actionBtn.classList.remove('active-combat', 'active-cafe');
-            stopSnd(sndNormal);
-            if (currentMode === 'combat') {
+            // Chỉ kết thúc nếu đang ở mode combat và đang giữ nút
+            if (currentMode === 'combat' && isActionActive) {
+                isActionActive = false;
+                actionBtn.classList.remove('active-combat');
+                stopSnd(sndNormal);
                 showModel('atkEnd');
                 models.atkEnd.removeAttribute('animation-mixer');
                 models.atkEnd.setAttribute('animation-mixer', {clip: '*', loop: 'once', clampWhenFinished: true});
-            } else { showModel('cIdle'); }
+            }
         }
 
         // --- NÚT B (CHẠM) ---
         function onEXClick(e) {
             if (e.cancelable) e.preventDefault();
             if (isActionActive || isEXRunning) return;
-
             if (stopTimer) { clearTimeout(stopTimer); stopTimer = null; }
 
             isEXRunning = true; moveData.active = false;
@@ -166,11 +168,20 @@
         window.addEventListener('touchend', onAEnd); window.addEventListener('mouseup', onAEnd);
         exBtn.addEventListener('click', onEXClick);
 
+        // --- LISTENERS KẾT THÚC ANIMATION ---
         models.atkStart.addEventListener('animation-finished', () => { if(isActionActive) { showModel('atkMid'); lastMidTime = 0; } });
         models.atkEnd.addEventListener('animation-finished', () => { if(!isActionActive && !moveData.active) showModel('idle'); });
+        
         models.ex.addEventListener('animation-finished', () => { 
             isEXRunning = false; exBtn.classList.remove('active-ex'); stopSnd(sndEx);
             showModel(currentMode === 'combat' ? 'idle' : 'cIdle'); 
+        });
+
+        // Tự động hồi phục sau khi chạm nút I trong Cafe
+        models.cInter.addEventListener('animation-finished', () => { 
+            isEXRunning = false;
+            actionBtn.classList.remove('active-cafe');
+            showModel('cIdle');
         });
 
         document.getElementById('switch-btn').addEventListener('click', () => {
@@ -196,7 +207,6 @@
                     showModel('stop'); 
                     models.stop.removeAttribute('animation-mixer');
                     models.stop.setAttribute('animation-mixer', {clip: '*', loop: 'once', clampWhenFinished: true});
-                    
                     if (stopTimer) clearTimeout(stopTimer);
                     stopTimer = setTimeout(() => { 
                         if (!moveData.active && !isActionActive && !isEXRunning) showModel('idle');
