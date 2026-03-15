@@ -2,7 +2,7 @@
 <html>
 <head>
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Aris AR - Audio Act Fixed</title>
+    <title>Aris AR - EX Click Mode</title>
     <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
     <script src="https://cdn.jsdelivr.net/gh/donmccurdy/aframe-extras@v7.0.0/dist/aframe-extras.min.js"></script>
@@ -127,7 +127,7 @@
             const s = document.getElementById(id);
             if(s) { 
                 s.pause(); s.currentTime = 0; s.loop = loop; 
-                s.play().catch(e => console.log("Audio play blocked", e)); 
+                s.play().catch(()=>{}); 
             }
         }
 
@@ -138,19 +138,6 @@
             gunDelayTimeout = setTimeout(() => { 
                 if(isActionActive) playSound(id, true); 
             }, (frame / FPS) * 1000);
-        }
-
-        // Voice Cafe ngẫu nhiên mỗi 15 giây
-        function startCafeVoice() {
-            if(cafeTimer) clearInterval(cafeTimer);
-            cafeTimer = setInterval(() => {
-                if(currentMode === 'cafe' && !isActionActive) {
-                    const ids = ['snd-cafe-1', 'snd-cafe-2', 'snd-cafe-3', 'snd-cafe-4', 'snd-cafe-5'];
-                    const pick = ids[Math.floor(Math.random() * ids.length)];
-                    ids.forEach(i => stopSound(i));
-                    playSound(pick);
-                }
-            }, 15000);
         }
 
         function onActionStart(e) {
@@ -166,55 +153,75 @@
                 actionBtn.classList.add('active-cafe'); showModel('cInter');
                 models.cInter.removeAttribute('animation-mixer');
                 models.cInter.setAttribute('animation-mixer', {clip: '*', loop: 'once', clampWhenFinished: true});
-                // Khi nhấn Cafe thì phát 1 câu ngay lập tức
                 const ids = ['snd-cafe-1', 'snd-cafe-2', 'snd-cafe-3', 'snd-cafe-4', 'snd-cafe-5'];
                 playSound(ids[Math.floor(Math.random() * ids.length)]);
             }
         }
 
         function onActionEnd() {
-            if (isActionActive) {
-                isActionActive = false;
-                actionBtn.classList.remove('active-combat', 'active-cafe');
-                stopSound('snd-gun-normal');
-                if (currentMode === 'combat') {
-                    showModel('atkEnd');
-                    models.atkEnd.removeAttribute('animation-mixer');
-                    models.atkEnd.setAttribute('animation-mixer', {clip: '*', loop: 'once', clampWhenFinished: true});
-                } else {
-                    showModel('cIdle');
+            if (isActionActive && currentMode !== 'combat-ex') { // Đảm bảo không ngắt khi đang EX
+                if (models.atkMid.getAttribute('visible') === 'true' || models.atkStart.getAttribute('visible') === 'true' || currentMode === 'cafe') {
+                    isActionActive = false;
+                    actionBtn.classList.remove('active-combat', 'active-cafe');
+                    stopSound('snd-gun-normal');
+                    if (currentMode === 'combat') {
+                        showModel('atkEnd');
+                        models.atkEnd.removeAttribute('animation-mixer');
+                        models.atkEnd.setAttribute('animation-mixer', {clip: '*', loop: 'once', clampWhenFinished: true});
+                    } else {
+                        showModel('cIdle');
+                    }
                 }
             }
         }
 
-        function onEXStart(e) {
+        function onEXClick(e) {
             if (e.cancelable) e.preventDefault();
             if (isActionActive) return;
-            isActionActive = true; moveData.active = false; exCount++;
+            isActionActive = true; 
+            const prevMode = currentMode;
+            currentMode = 'combat-ex'; // Trạng thái tạm thời để chặn ActionEnd
+            moveData.active = false; exCount++;
             exBtn.classList.add('active-ex'); showModel('ex'); triggerGunSFX('ex');
+            
             if(exCount % 2 !== 0) playSound(['snd-ex-v1','snd-ex-v2','snd-ex-v3','snd-ex-l1','snd-ex-l2','snd-ex-l3'][Math.floor(Math.random()*6)]);
+            
             models.ex.removeAttribute('animation-mixer');
             models.ex.setAttribute('animation-mixer', {clip: '*', loop: 'once', clampWhenFinished: true});
+            
+            // Lưu lại mode gốc để trả về sau khi xong EX
+            models.ex.dataset.prevMode = prevMode;
         }
 
+        // Action: Giữ để bắn
         actionBtn.addEventListener('mousedown', onActionStart);
         actionBtn.addEventListener('touchstart', onActionStart);
         window.addEventListener('mouseup', onActionEnd);
         window.addEventListener('touchend', (e) => { if(isActionActive) onActionEnd(); });
-        exBtn.addEventListener('mousedown', onEXStart);
-        exBtn.addEventListener('touchstart', onEXStart);
+
+        // EX: Chỉ cần chạm (click/touchstart)
+        exBtn.addEventListener('click', onEXClick);
+        exBtn.addEventListener('touchstart', (e) => { e.preventDefault(); onEXClick(e); });
 
         models.atkStart.addEventListener('animation-finished', () => { if(isActionActive) { showModel('atkMid'); lastMidTime = 0; } });
         models.atkEnd.addEventListener('animation-finished', () => { if(!isActionActive && !moveData.active) showModel('idle'); });
-        models.ex.addEventListener('animation-finished', () => { isActionActive = false; exBtn.classList.remove('active-ex'); stopSound('snd-gun-ex'); showModel(currentMode === 'combat' ? 'idle' : 'cIdle'); });
+        
+        models.ex.addEventListener('animation-finished', () => { 
+            isActionActive = false;
+            exBtn.classList.remove('active-ex'); 
+            stopSound('snd-gun-ex');
+            currentMode = models.ex.dataset.prevMode || 'combat';
+            showModel(currentMode === 'combat' ? 'idle' : 'cIdle'); 
+        });
+
         models.cInter.addEventListener('animation-finished', () => { isActionActive = false; actionBtn.classList.remove('active-cafe'); showModel('cIdle'); });
 
         switchBtn.addEventListener('click', () => {
             if (isActionActive) return;
             if (currentMode === 'combat') {
-                currentMode = 'cafe'; actionBtn.innerText = 'I'; exBtn.style.display = 'none'; showModel('cIdle'); startCafeVoice();
+                currentMode = 'cafe'; actionBtn.innerText = 'I'; exBtn.style.display = 'none'; showModel('cIdle');
             } else {
-                currentMode = 'combat'; actionBtn.innerText = 'A'; exBtn.style.display = 'flex'; showModel('idle'); clearInterval(cafeTimer);
+                currentMode = 'combat'; actionBtn.innerText = 'A'; exBtn.style.display = 'flex'; showModel('idle');
             }
         });
 
