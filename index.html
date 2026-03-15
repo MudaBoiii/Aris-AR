@@ -2,7 +2,7 @@
 <html>
 <head>
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Aris AR - Final Master</title>
+    <title>Aris AR - Smooth Animation Fix</title>
     <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
     <script src="https://cdn.jsdelivr.net/gh/donmccurdy/aframe-extras@v7.0.0/dist/aframe-extras.min.js"></script>
@@ -87,7 +87,8 @@
 
     <script>
         const FPS = 24;
-        let currentMode = 'combat', isActionActive = false, isEXRunning = false, lastMidTime = 0, cafeVoiceTimeout = null;
+        let currentMode = 'combat', isActionActive = false, isEXRunning = false, lastMidTime = 0;
+        let cafeVoiceTimeout = null, stopTimer = null;
         let moveData = { x: 0, z: 0, active: false };
 
         const models = {
@@ -105,22 +106,22 @@
         function stopSnd(s) { if(s) { s.pause(); s.currentTime = 0; s.loop = false; } }
         function playSnd(s, loop=false) { if(s) { s.pause(); s.currentTime = 0; s.loop = loop; s.play().catch(()=>{}); } }
 
-        // Logic Auto Cafe Voice
         function autoCafeVoice() {
             clearTimeout(cafeVoiceTimeout);
             if (currentMode === 'cafe' && !isActionActive && !isEXRunning) {
                 const randSnd = document.getElementById(`snd-cafe-${Math.floor(Math.random()*5)+1}`);
                 playSnd(randSnd);
             }
-            // Ngẫu nhiên từ 10s đến 20s nói 1 lần
-            let nextTime = Math.floor(Math.random() * 10000) + 10000;
-            cafeVoiceTimeout = setTimeout(autoCafeVoice, nextTime);
+            cafeVoiceTimeout = setTimeout(autoCafeVoice, Math.floor(Math.random() * 10000) + 10000);
         }
 
         // --- NÚT A (GIỮ) ---
         function onAStart(e) {
             if (e.cancelable) e.preventDefault();
             if (isActionActive || isEXRunning) return;
+            
+            if (stopTimer) { clearTimeout(stopTimer); stopTimer = null; }
+
             isActionActive = true; moveData.active = false;
             if (currentMode === 'combat') {
                 actionBtn.classList.add('active-combat'); showModel('atkStart');
@@ -149,6 +150,9 @@
         function onEXClick(e) {
             if (e.cancelable) e.preventDefault();
             if (isActionActive || isEXRunning) return;
+
+            if (stopTimer) { clearTimeout(stopTimer); stopTimer = null; }
+
             isEXRunning = true; moveData.active = false;
             exBtn.classList.add('active-ex'); showModel('ex');
             setTimeout(() => { if(isEXRunning) playSnd(sndEx, true); }, 500);
@@ -158,7 +162,6 @@
             models.ex.setAttribute('animation-mixer', {clip: '*', loop: 'once', clampWhenFinished: true});
         }
 
-        // Listeners
         actionBtn.addEventListener('touchstart', onAStart); actionBtn.addEventListener('mousedown', onAStart);
         window.addEventListener('touchend', onAEnd); window.addEventListener('mouseup', onAEnd);
         exBtn.addEventListener('click', onEXClick);
@@ -182,6 +185,7 @@
         const manager = nipplejs.create({zone: document.getElementById('joystick-zone'), mode: 'static', position: {left: '70px', bottom: '70px'}, color: 'cyan'});
         manager.on('move', (evt, data) => {
             if (isActionActive || isEXRunning) return;
+            if (stopTimer) { clearTimeout(stopTimer); stopTimer = null; }
             moveData.active = true; moveData.x = data.vector.x; moveData.z = -data.vector.y;
             showModel(currentMode === 'combat' ? 'walk' : 'cWalk');
         });
@@ -189,9 +193,15 @@
             moveData.active = false;
             if (!isActionActive && !isEXRunning) {
                 if (currentMode === 'combat') {
-                    showModel('stop'); models.stop.removeAttribute('animation-mixer');
+                    showModel('stop'); 
+                    models.stop.removeAttribute('animation-mixer');
                     models.stop.setAttribute('animation-mixer', {clip: '*', loop: 'once', clampWhenFinished: true});
-                    setTimeout(() => { if (!moveData.active && !isActionActive) showModel('idle'); }, 2000);
+                    
+                    if (stopTimer) clearTimeout(stopTimer);
+                    stopTimer = setTimeout(() => { 
+                        if (!moveData.active && !isActionActive && !isEXRunning) showModel('idle');
+                        stopTimer = null;
+                    }, 2000);
                 } else showModel('cIdle');
             }
         });
