@@ -2,97 +2,39 @@
 <html>
 <head>
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Aris AR - Final Master (Full Format)</title>
+    <title>Aris AR - Cross Platform (PC & Mobile)</title>
     <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
     <script src="https://cdn.jsdelivr.net/gh/donmccurdy/aframe-extras@v7.0.0/dist/aframe-extras.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/nipplejs/0.10.1/nipplejs.min.js"></script>
 
     <style>
-        body { 
-            margin: 0; 
-            overflow: hidden; 
-            touch-action: none; 
-            background: #000; 
-        }
-        
-        #joystick-zone { 
-            position: fixed; 
-            bottom: 30px; 
-            left: 30px; 
-            width: 120px; 
-            height: 120px; 
-            z-index: 3000; 
-        }
+        body { margin: 0; overflow: hidden; touch-action: none; background: #000; }
+        #joystick-zone { position: fixed; bottom: 30px; left: 30px; width: 120px; height: 120px; z-index: 3000; }
         
         .btn-action {
-            position: fixed; 
-            width: 75px; 
-            height: 75px;
-            background: rgba(255, 255, 255, 0.15); 
-            border: 4px solid #fff; 
-            border-radius: 50%;
-            color: white; 
-            font-weight: bold; 
-            z-index: 3000;
-            display: flex; 
-            align-items: center; 
-            justify-content: center;
-            user-select: none; 
-            -webkit-tap-highlight-color: transparent;
-            box-shadow: 0 0 15px rgba(0,0,0,0.5); 
-            transition: all 0.1s;
+            position: fixed; width: 75px; height: 75px;
+            background: rgba(255, 255, 255, 0.15); border: 4px solid #fff; border-radius: 50%;
+            color: white; font-weight: bold; z-index: 3000;
+            display: flex; align-items: center; justify-content: center;
+            user-select: none; -webkit-tap-highlight-color: transparent;
+            box-shadow: 0 0 15px rgba(0,0,0,0.5); transition: all 0.1s;
+            cursor: pointer; /* Hiển thị bàn tay khi dùng PC */
         }
         
-        #action-btn { 
-            bottom: 50px; 
-            right: 30px; 
-            font-size: 32px; 
-        } 
-        
-        #ex-btn { 
-            bottom: 50px; 
-            right: 125px; 
-            font-size: 22px; 
-        }
+        #action-btn { bottom: 50px; right: 30px; font-size: 32px; } 
+        #ex-btn { bottom: 50px; right: 125px; font-size: 22px; }
 
-        #action-btn.active-combat { 
-            background: rgba(78, 160, 238, 0.6); 
-            border-color: #4ea0ee; 
-            box-shadow: 0 0 25px #4ea0ee; 
-            transform: scale(0.9); 
-        }
-        
-        #action-btn.active-cafe { 
-            background: rgba(255, 165, 0, 0.6); 
-            border-color: #ffa500; 
-            box-shadow: 0 0 25px #ffa500; 
-            transform: scale(0.9); 
-        }
-        
-        #ex-btn.active-ex { 
-            background: rgba(160, 32, 240, 0.6); 
-            border-color: #a020f0; 
-            box-shadow: 0 0 30px #a020f0; 
-            transform: scale(0.9); 
-        }
+        #action-btn.active-combat { background: rgba(78, 160, 238, 0.6); border-color: #4ea0ee; box-shadow: 0 0 25px #4ea0ee; transform: scale(0.9); }
+        #action-btn.active-cafe { background: rgba(255, 165, 0, 0.6); border-color: #ffa500; box-shadow: 0 0 25px #ffa500; transform: scale(0.9); }
+        #ex-btn.active-ex { background: rgba(160, 32, 240, 0.6); border-color: #a020f0; box-shadow: 0 0 30px #a020f0; transform: scale(0.9); }
 
         #switch-btn {
-            position: fixed; 
-            bottom: 145px; 
-            right: 42px; 
-            width: 50px; 
-            height: 50px;
-            background: rgba(0, 0, 0, 0.5); 
-            border: 2px solid #fff; 
-            border-radius: 10px;
-            color: white; 
-            font-size: 18px; 
-            font-weight: bold; 
-            z-index: 3000;
-            display: flex; 
-            align-items: center; 
-            justify-content: center;
+            position: fixed; bottom: 145px; right: 42px; width: 50px; height: 50px;
+            background: rgba(0, 0, 0, 0.5); border: 2px solid #fff; border-radius: 10px;
+            color: white; font-size: 18px; font-weight: bold; z-index: 3000;
+            display: flex; align-items: center; justify-content: center;
+            cursor: pointer;
         }
     </style>
 </head>
@@ -105,9 +47,7 @@
 
     <a-scene 
         mindar-image="imageTargetSrc: targets.mind; missTolerance: 10000; stayVisible: true; filterMinCF: 0.0001; filterBeta: 0.001;" 
-        renderer="colorManagement: true; antialias: true;" 
-        vr-mode-ui="enabled: false" 
-        device-orientation-permission-ui="enabled: false">
+        renderer="colorManagement: true; antialias: true;" vr-mode-ui="enabled: false" device-orientation-permission-ui="enabled: false">
 
         <a-assets>
             <a-asset-item id="mIdle" src="Movement/Walk_Idle.glb"></a-asset-item>
@@ -180,7 +120,6 @@
         // --- SWITCH MODE (S) ---
         switchBtn.addEventListener('click', function() {
             if (isActionActive) return; 
-            
             if (currentMode === 'combat') {
                 currentMode = 'cafe';
                 actionBtn.innerText = 'I';
@@ -196,101 +135,60 @@
 
         // --- ANIMATION EVENTS ---
         models.atkStart.addEventListener('animation-finished', function() {
-            if (isActionActive) {
-                showModel('atkMid');
-            }
+            if (isActionActive) showModel('atkMid');
         });
 
         models.atkEnd.addEventListener('animation-finished', function() {
-            if (!isActionActive && !moveData.active) {
-                showModel('idle');
-            }
+            if (!isActionActive && !moveData.active) showModel('idle');
         });
 
         models.ex.addEventListener('animation-finished', function() {
             isActionActive = false;
             exBtn.classList.remove('active-ex');
-            
             if (!moveData.active) {
-                if (currentMode === 'combat') {
-                    showModel('idle');
-                } else {
-                    showModel('cIdle');
-                }
+                showModel(currentMode === 'combat' ? 'idle' : 'cIdle');
             }
         });
 
         models.cInter.addEventListener('animation-finished', function() {
             isActionActive = false; 
-            if (!moveData.active) {
-                showModel('cIdle');
-            }
+            if (!moveData.active) showModel('cIdle');
         });
 
         // --- JOYSTICK ---
         const manager = nipplejs.create({
             zone: document.getElementById('joystick-zone'),
-            mode: 'static', 
-            position: {left: '70px', bottom: '70px'}, 
-            color: 'cyan'
+            mode: 'static', position: {left: '70px', bottom: '70px'}, color: 'cyan'
         });
 
         manager.on('move', function(evt, data) {
             if (isActionActive) return;
-            
             moveData.active = true;
             moveData.x = data.vector.x;
             moveData.z = -data.vector.y;
-            
-            if (currentMode === 'combat') {
-                showModel('walk');
-            } else {
-                showModel('cWalk');
-            }
+            showModel(currentMode === 'combat' ? 'walk' : 'cWalk');
         });
 
         manager.on('end', function() {
             moveData.active = false;
-            
             if (!isActionActive) {
                 if (currentMode === 'combat') {
                     showModel('stop');
                     models.stop.removeAttribute('animation-mixer');
                     models.stop.setAttribute('animation-mixer', {clip: '*', loop: 'once', clampWhenFinished: true});
-                    
                     setTimeout(function() {
-                        if (!moveData.active && !isActionActive) {
-                            showModel('idle');
-                        }
+                        if (!moveData.active && !isActionActive) showModel('idle');
                     }, STOP_DURATION_MS);
-                } else { 
-                    showModel('cIdle'); 
-                }
+                } else { showModel('cIdle'); }
             }
         });
 
-        // --- NÚT B (EX SKILL) ---
-        exBtn.addEventListener('touchstart', function(e) {
-            e.preventDefault();
+        // --- LOGIC XỬ LÝ NÚT BẤM (DÙNG CHUNG PC & MOBILE) ---
+        function onActionStart(e) {
+            if (e.cancelable) e.preventDefault();
             if (isActionActive) return;
-            
-            isActionActive = true;
-            moveData.active = false;
-            exBtn.classList.add('active-ex');
-            
-            showModel('ex');
-            models.ex.removeAttribute('animation-mixer');
-            models.ex.setAttribute('animation-mixer', {clip: '*', loop: 'once', clampWhenFinished: true});
-        });
-
-        // --- NÚT A (NORMAL ATTACK / INTERACT) ---
-        actionBtn.addEventListener('touchstart', function(e) {
-            e.preventDefault();
-            if (isActionActive) return;
-            
             isActionActive = true;
             moveData.active = false; 
-            
             if (currentMode === 'combat') {
                 actionBtn.classList.add('active-combat');
                 showModel('atkStart');
@@ -302,32 +200,49 @@
                 models.cInter.removeAttribute('animation-mixer');
                 models.cInter.setAttribute('animation-mixer', {clip: '*', loop: 'once', clampWhenFinished: true});
             }
-        });
+        }
 
-        actionBtn.addEventListener('touchend', function(e) {
-            e.preventDefault();
+        function onActionEnd(e) {
+            if (e.cancelable) e.preventDefault();
             actionBtn.classList.remove('active-combat', 'active-cafe');
-            
             if (!isActionActive) return;
-            
             if (currentMode === 'combat' && !models.ex.getAttribute('visible')) {
                 isActionActive = false;
                 showModel('atkEnd');
                 models.atkEnd.removeAttribute('animation-mixer');
                 models.atkEnd.setAttribute('animation-mixer', {clip: '*', loop: 'once', clampWhenFinished: true});
             }
-        });
+        }
+
+        function onEXStart(e) {
+            if (e.cancelable) e.preventDefault();
+            if (isActionActive) return;
+            isActionActive = true;
+            moveData.active = false;
+            exBtn.classList.add('active-ex');
+            showModel('ex');
+            models.ex.removeAttribute('animation-mixer');
+            models.ex.setAttribute('animation-mixer', {clip: '*', loop: 'once', clampWhenFinished: true});
+        }
+
+        // Gán sự kiện cho nút A (Chuột + Chạm)
+        actionBtn.addEventListener('touchstart', onActionStart);
+        actionBtn.addEventListener('mousedown', onActionStart);
+        actionBtn.addEventListener('touchend', onActionEnd);
+        actionBtn.addEventListener('mouseup', onActionEnd);
+
+        // Gán sự kiện cho nút B (Chuột + Chạm)
+        exBtn.addEventListener('touchstart', onEXStart);
+        exBtn.addEventListener('mousedown', onEXStart);
 
         // --- GAME LOOP ---
         function update() {
             if (moveData.active && !isActionActive) {
                 const speed = (currentMode === 'cafe') ? 0.025 : 0.05;
-                
                 let currPos = root.getAttribute('position');
                 currPos.x += moveData.x * speed;
                 currPos.z += moveData.z * speed;
                 root.setAttribute('position', currPos);
-                
                 let angleDeg = Math.atan2(moveData.x, moveData.z) * (180 / Math.PI);
                 rotWrapper.setAttribute('rotation', `0 ${angleDeg} 0`);
             }
