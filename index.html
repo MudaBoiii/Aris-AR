@@ -2,7 +2,7 @@
 <html>
 <head>
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Aris AR - Interactive Icons</title>
+    <title>Aris AR - SFX Pro Upgrade</title>
     <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
     <script src="https://cdn.jsdelivr.net/gh/donmccurdy/aframe-extras@v7.0.0/dist/aframe-extras.min.js"></script>
@@ -10,67 +10,29 @@
     <style>
         body { margin: 0; overflow: hidden; touch-action: none; background: #000; }
         #joystick-zone { position: fixed; bottom: 30px; left: 30px; width: 120px; height: 120px; z-index: 3000; }
-        
         .btn-action {
-            position: fixed; width: 75px; height: 75px; 
-            background: rgba(255, 255, 255, 0.2); 
-            border: 3px solid #fff; border-radius: 50%; 
-            z-index: 3000; display: flex; align-items: center; justify-content: center; 
-            user-select: none; -webkit-tap-highlight-color: transparent; 
-            transition: all 0.1s ease-out; cursor: pointer;
+            position: fixed; width: 75px; height: 75px; background: rgba(255, 255, 255, 0.2); 
+            border: 3px solid #fff; border-radius: 50%; z-index: 3000; display: flex; 
+            align-items: center; justify-content: center; user-select: none; 
+            -webkit-tap-highlight-color: transparent; transition: all 0.1s ease-out; cursor: pointer;
             background-size: 70%; background-repeat: no-repeat; background-position: center;
-            filter: brightness(1); /* Trạng thái bình thường */
+            filter: brightness(1);
         }
-
-        /* Icon Path */
         #action-btn { bottom: 50px; right: 30px; width: 85px; height: 85px; }
         .mode-combat-icon { background-image: url('Icon/Normal.png'); }
         .mode-cafe-icon { background-image: url('Icon/Aris_Sticker.png'); background-size: 80%; }
-
-        #ex-btn { 
-            bottom: 60px; right: 135px; width: 65px; height: 65px; 
-            background-image: url('Icon/EX.png'); 
-        }
-
+        #ex-btn { bottom: 60px; right: 135px; width: 65px; height: 65px; background-image: url('Icon/EX.png'); }
         #switch-btn {
             position: fixed; bottom: 155px; right: 45px; width: 55px; height: 55px;
             background: rgba(0, 0, 0, 0.6); border: 2px solid #fff; border-radius: 12px;
-            z-index: 3000; cursor: pointer;
-            background-image: url('Icon/GDD.png');
+            z-index: 3000; cursor: pointer; background-image: url('Icon/GDD.png');
             background-size: 80%; background-repeat: no-repeat; background-position: center;
             transition: all 0.1s;
         }
-
-        /* HIỆU ỨNG ĐỘ SÁNG KHI NHẤN */
-        .btn-action:active, #switch-btn:active {
-            filter: brightness(1.5); /* Tăng độ sáng lên 150% */
-        }
-
-        #action-btn.active-combat { 
-            background-color: rgba(78, 160, 238, 0.6); 
-            transform: scale(0.9); 
-            box-shadow: 0 0 25px #4ea0ee;
-            filter: brightness(1.8); /* Riêng nút A khi giữ bắn sẽ sáng hơn nữa */
-        }
-        
-        #action-btn.active-cafe { 
-            background-color: rgba(255, 165, 0, 0.6); 
-            transform: scale(0.9); 
-            box-shadow: 0 0 25px #ffa500;
-            filter: brightness(1.5);
-        }
-
-        #ex-btn.active-ex { 
-            background-color: rgba(160, 32, 240, 0.6); 
-            transform: scale(0.9); 
-            box-shadow: 0 0 30px #a020f0;
-            filter: brightness(1.5);
-        }
-
-        #switch-btn:active {
-            transform: scale(0.95);
-            background-color: rgba(255, 255, 255, 0.3);
-        }
+        .btn-action:active, #switch-btn:active { filter: brightness(1.5); }
+        #action-btn.active-combat { background-color: rgba(78, 160, 238, 0.6); transform: scale(0.9); box-shadow: 0 0 25px #4ea0ee; filter: brightness(1.8); }
+        #action-btn.active-cafe { background-color: rgba(255, 165, 0, 0.6); transform: scale(0.9); box-shadow: 0 0 25px #ffa500; }
+        #ex-btn.active-ex { background-color: rgba(160, 32, 240, 0.6); transform: scale(0.9); box-shadow: 0 0 30px #a020f0; }
     </style>
 </head>
 <body>
@@ -79,7 +41,7 @@
     <div id="ex-btn" class="btn-action"></div>
     <div id="action-btn" class="btn-action mode-combat-icon"></div>
 
-    <a-scene mindar-image="imageTargetSrc: targets.mind; missTolerance: 10000; stayVisible: true;" renderer="colorManagement: true; antialias: true;" vr-mode-ui="enabled: false">
+    <a-scene mindar-image="imageTargetSrc: targets.mind; stayVisible: true;" renderer="colorManagement: true; antialias: true;" vr-mode-ui="enabled: false">
         <a-assets>
             <a-asset-item id="mIdle" src="Movement/Walk_Idle.glb"></a-asset-item>
             <a-asset-item id="mWalk" src="Movement/Walk.glb"></a-asset-item>
@@ -91,23 +53,20 @@
             <a-asset-item id="cWalk" src="Cafe/Walk_Cafe_Go.glb"></a-asset-item>
             <a-asset-item id="cInter" src="Cafe/Walk_Cafe_Inter.glb"></a-asset-item>
             <a-asset-item id="exSkill" src="EX/EX.glb"></a-asset-item>
-
+            <audio id="snd-gun-normal" src="SFX/Gun/Normal.mp3"></audio>
+            <audio id="snd-gun-normal-2" src="SFX/Gun/Normal2.mp3"></audio>
+            <audio id="snd-gun-ex" src="SFX/Gun/EX.mp3"></audio>
             <audio id="snd-cafe-1" src="SFX/Cafe/Alice_Cafe_Act_1.ogg"></audio>
             <audio id="snd-cafe-2" src="SFX/Cafe/Alice_Cafe_Act_2.ogg"></audio>
             <audio id="snd-cafe-3" src="SFX/Cafe/Alice_Cafe_Act_3.ogg"></audio>
             <audio id="snd-cafe-4" src="SFX/Cafe/Alice_Cafe_Act_4.ogg"></audio>
             <audio id="snd-cafe-5" src="SFX/Cafe/Alice_Cafe_Act_5.ogg"></audio>
-            <audio id="snd-shout-1" src="SFX/Fire/Normal/Alice_Battle_Shout_1.ogg"></audio>
-            <audio id="snd-shout-2" src="SFX/Fire/Normal/Alice_Battle_Shout_2.ogg"></audio>
-            <audio id="snd-shout-3" src="SFX/Fire/Normal/Alice_Battle_Shout_3.ogg"></audio>
             <audio id="snd-ex-v1" src="SFX/Fire/EX/Alice_ExSkill_1.ogg"></audio>
             <audio id="snd-ex-v2" src="SFX/Fire/EX/Alice_ExSkill_2.ogg"></audio>
             <audio id="snd-ex-v3" src="SFX/Fire/EX/Alice_ExSkill_3.ogg"></audio>
             <audio id="snd-ex-l1" src="SFX/Fire/EX/Alice_ExSkill_Level_1.ogg"></audio>
             <audio id="snd-ex-l2" src="SFX/Fire/EX/Alice_ExSkill_Level_2.ogg"></audio>
             <audio id="snd-ex-l3" src="SFX/Fire/EX/Alice_ExSkill_Level_3.ogg"></audio>
-            <audio id="snd-gun-normal" src="SFX/Gun/Normal.mp3"></audio>
-            <audio id="snd-gun-ex" src="SFX/Gun/EX.mp3"></audio>
         </a-assets>
 
         <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
@@ -130,9 +89,8 @@
     </a-scene>
 
     <script>
-        const FPS = 24;
         let currentMode = 'combat', isActionActive = false, isEXRunning = false, lastMidTime = 0;
-        let cafeVoiceTimeout = null, stopTimer = null;
+        let isFirstLoop = true, cafeVoiceTimeout = null, stopTimer = null;
         let moveData = { x: 0, z: 0, active: false };
 
         const models = {
@@ -144,117 +102,61 @@
         };
 
         const actionBtn = document.getElementById('action-btn'), exBtn = document.getElementById('ex-btn');
-        const sndNormal = document.getElementById('snd-gun-normal'), sndEx = document.getElementById('snd-gun-ex');
+        const sndNormal = document.getElementById('snd-gun-normal'), sndNormal2 = document.getElementById('snd-gun-normal-2'), sndEx = document.getElementById('snd-gun-ex');
 
         function showModel(type) { Object.keys(models).forEach(k => models[k].setAttribute('visible', k === type)); }
         function stopSnd(s) { if(s) { s.pause(); s.currentTime = 0; s.loop = false; } }
         function playSnd(s, loop=false) { if(s) { s.pause(); s.currentTime = 0; s.loop = loop; s.play().catch(()=>{}); } }
 
-        function autoCafeVoice() {
-            clearTimeout(cafeVoiceTimeout);
-            if (currentMode === 'cafe' && !isActionActive && !isEXRunning) {
-                const randSnd = document.getElementById(`snd-cafe-${Math.floor(Math.random()*5)+1}`);
-                playSnd(randSnd);
-            }
-            cafeVoiceTimeout = setTimeout(autoCafeVoice, Math.floor(Math.random() * 10000) + 10000);
-        }
-
+        // --- ATTACK LOGIC ---
         function onAStart(e) {
             if (e.cancelable) e.preventDefault();
             if (isActionActive || isEXRunning) return;
             if (stopTimer) { clearTimeout(stopTimer); stopTimer = null; }
 
             if (currentMode === 'combat') {
-                isActionActive = true; moveData.active = false;
+                isActionActive = true; isFirstLoop = true;
                 actionBtn.classList.add('active-combat'); showModel('atkStart');
                 setTimeout(() => { if(isActionActive) playSnd(sndNormal, true); }, 200);
-                models.atkStart.removeAttribute('animation-mixer');
-                models.atkStart.setAttribute('animation-mixer', {clip: '*', loop: 'once', clampWhenFinished: true});
             } else {
-                isEXRunning = true; moveData.active = false;
-                actionBtn.classList.add('active-cafe'); showModel('cInter');
-                models.cInter.removeAttribute('animation-mixer');
-                models.cInter.setAttribute('animation-mixer', {clip: '*', loop: 'once', clampWhenFinished: true});
+                isEXRunning = true; actionBtn.classList.add('active-cafe'); showModel('cInter');
             }
+            const activeMdl = currentMode === 'combat' ? models.atkStart : models.cInter;
+            activeMdl.removeAttribute('animation-mixer');
+            activeMdl.setAttribute('animation-mixer', {clip: '*', loop: 'once', clampWhenFinished: true});
         }
 
         function onAEnd() {
             if (currentMode === 'combat' && isActionActive) {
-                isActionActive = false;
-                actionBtn.classList.remove('active-combat');
-                stopSnd(sndNormal);
+                isActionActive = false; actionBtn.classList.remove('active-combat');
+                stopSnd(sndNormal); stopSnd(sndNormal2);
                 showModel('atkEnd');
                 models.atkEnd.removeAttribute('animation-mixer');
                 models.atkEnd.setAttribute('animation-mixer', {clip: '*', loop: 'once', clampWhenFinished: true});
             }
         }
 
+        // --- EX LOGIC (FIXED DELAY) ---
         function onEXClick(e) {
             if (e.cancelable) e.preventDefault();
             if (isActionActive || isEXRunning) return;
-            if (stopTimer) { clearTimeout(stopTimer); stopTimer = null; }
-            isEXRunning = true; moveData.active = false;
-            exBtn.classList.add('active-ex'); showModel('ex');
-            setTimeout(() => { if(isEXRunning) playSnd(sndEx, true); }, 500);
+            isEXRunning = true; exBtn.classList.add('active-ex'); showModel('ex');
+            
+            // Fix delay: Chạy âm thanh súng gần như tức thì cùng Voice
+            setTimeout(() => { if(isEXRunning) playSnd(sndEx); }, 50); 
             const voices = ['snd-ex-v1','snd-ex-v2','snd-ex-v3','snd-ex-l1','snd-ex-l2','snd-ex-l3'];
-            playSnd(document.getElementById(voices[Math.floor(Math.random()*6)]));
+            playSnd(document.getElementById(voices[Math.floor(Math.random()*voices.length)]));
+
             models.ex.removeAttribute('animation-mixer');
             models.ex.setAttribute('animation-mixer', {clip: '*', loop: 'once', clampWhenFinished: true});
         }
 
-        document.getElementById('switch-btn').addEventListener('click', () => {
-            if (isActionActive || isEXRunning) return;
-            currentMode = (currentMode === 'combat') ? 'cafe' : 'combat';
-            if (currentMode === 'combat') {
-                actionBtn.classList.replace('mode-cafe-icon', 'mode-combat-icon');
-                exBtn.style.display = 'flex';
-                showModel('idle');
-                clearTimeout(cafeVoiceTimeout);
-            } else {
-                actionBtn.classList.replace('mode-combat-icon', 'mode-cafe-icon');
-                exBtn.style.display = 'none';
-                showModel('cIdle');
-                autoCafeVoice();
-            }
-        });
-
-        actionBtn.addEventListener('touchstart', onAStart); actionBtn.addEventListener('mousedown', onAStart);
-        window.addEventListener('touchend', onAEnd); window.addEventListener('mouseup', onAEnd);
-        exBtn.addEventListener('click', onEXClick);
-
+        // --- ANIMATION LISTENERS ---
         models.atkStart.addEventListener('animation-finished', () => { if(isActionActive) { showModel('atkMid'); lastMidTime = 0; } });
-        models.atkEnd.addEventListener('animation-finished', () => { if(!isActionActive && !moveData.active) showModel('idle'); });
-        models.ex.addEventListener('animation-finished', () => { 
-            isEXRunning = false; exBtn.classList.remove('active-ex'); stopSnd(sndEx);
-            showModel(currentMode === 'combat' ? 'idle' : 'cIdle'); 
-        });
-        models.cInter.addEventListener('animation-finished', () => { 
-            isEXRunning = false; actionBtn.classList.remove('active-cafe'); showModel('cIdle');
-        });
+        models.ex.addEventListener('animation-finished', () => { isEXRunning = false; exBtn.classList.remove('active-ex'); showModel(currentMode === 'combat' ? 'idle' : 'cIdle'); });
+        models.cInter.addEventListener('animation-finished', () => { isEXRunning = false; actionBtn.classList.remove('active-cafe'); showModel('cIdle'); });
 
-        const manager = nipplejs.create({zone: document.getElementById('joystick-zone'), mode: 'static', position: {left: '70px', bottom: '70px'}, color: 'cyan'});
-        manager.on('move', (evt, data) => {
-            if (isActionActive || isEXRunning) return;
-            if (stopTimer) { clearTimeout(stopTimer); stopTimer = null; }
-            moveData.active = true; moveData.x = data.vector.x; moveData.z = -data.vector.y;
-            showModel(currentMode === 'combat' ? 'walk' : 'cWalk');
-        });
-        manager.on('end', () => {
-            moveData.active = false;
-            if (!isActionActive && !isEXRunning) {
-                if (currentMode === 'combat') {
-                    showModel('stop'); 
-                    models.stop.removeAttribute('animation-mixer');
-                    models.stop.setAttribute('animation-mixer', {clip: '*', loop: 'once', clampWhenFinished: true});
-                    if (stopTimer) clearTimeout(stopTimer);
-                    stopTimer = setTimeout(() => { 
-                        if (!moveData.active && !isActionActive && !isEXRunning) showModel('idle');
-                        stopTimer = null;
-                    }, 2000);
-                } else showModel('cIdle');
-            }
-        });
-
+        // --- UPDATE LOOP (SFX SWITCHING) ---
         function update() {
             if (moveData.active && !isActionActive && !isEXRunning) {
                 const root = document.querySelector('#aris-root'), rot = document.querySelector('#aris-rotation');
@@ -268,12 +170,43 @@
                 const mixer = models.atkMid.components['animation-mixer'].mixer;
                 if (mixer && mixer._actions[0]) {
                     let cur = mixer._actions[0].time;
-                    if (cur < lastMidTime) sndNormal.currentTime = 17/24;
+                    if (cur < lastMidTime) { // Vòng lặp mới của Mid
+                        if (isFirstLoop) {
+                            isFirstLoop = false;
+                            stopSnd(sndNormal);
+                            playSnd(sndNormal2, true);
+                        }
+                        const activeSnd = isFirstLoop ? sndNormal : sndNormal2;
+                        activeSnd.currentTime = 17/24; 
+                    }
                     lastMidTime = cur;
                 }
             }
             requestAnimationFrame(update);
         }
+
+        // --- UI & JOYSTICK ---
+        document.getElementById('switch-btn').addEventListener('click', () => {
+            if (isActionActive || isEXRunning) return;
+            currentMode = (currentMode === 'combat') ? 'cafe' : 'combat';
+            actionBtn.classList.toggle('mode-combat-icon', currentMode === 'combat');
+            actionBtn.classList.toggle('mode-cafe-icon', currentMode === 'cafe');
+            exBtn.style.display = (currentMode === 'combat') ? 'flex' : 'none';
+            showModel(currentMode === 'combat' ? 'idle' : 'cIdle');
+        });
+
+        actionBtn.addEventListener('touchstart', onAStart); window.addEventListener('touchend', onAEnd);
+        exBtn.addEventListener('click', onEXClick);
+        nipplejs.create({zone: document.getElementById('joystick-zone'), mode: 'static', position: {left: '70px', bottom: '70px'}, color: 'cyan'})
+            .on('move', (evt, data) => {
+                if (isActionActive || isEXRunning) return;
+                moveData.active = true; moveData.x = data.vector.x; moveData.z = -data.vector.y;
+                showModel(currentMode === 'combat' ? 'walk' : 'cWalk');
+            }).on('end', () => {
+                moveData.active = false;
+                if (!isActionActive && !isEXRunning) showModel(currentMode === 'combat' ? 'idle' : 'cIdle');
+            });
+
         update();
     </script>
 </body>
