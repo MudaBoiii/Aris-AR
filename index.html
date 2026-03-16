@@ -64,9 +64,9 @@
             <audio id="snd-cafe-4" src="SFX/Cafe/Alice_Cafe_Act_4.ogg"></audio>
             <audio id="snd-cafe-5" src="SFX/Cafe/Alice_Cafe_Act_5.ogg"></audio>
             
-            <audio id="snd-inter-1" src="SFX/Inter/Inter1.mp3"></audio>
-            <audio id="snd-inter-2" src="SFX/Inter/Inter2.mp3"></audio>
-            <audio id="snd-inter-3" src="SFX/Inter/Inter3.mp3"></audio>
+            <audio id="snd-inter-1" src="SFX/Inter/Inter1.ogg"></audio>
+            <audio id="snd-inter-2" src="SFX/Inter/Inter2.ogg"></audio>
+            <audio id="snd-inter-3" src="SFX/Inter/Inter3.ogg"></audio>
 
             <audio id="snd-ex-v1" src="SFX/Fire/EX/Alice_ExSkill_1.ogg"></audio>
             <audio id="snd-ex-v2" src="SFX/Fire/EX/Alice_ExSkill_2.ogg"></audio>
@@ -118,7 +118,7 @@
 
         function playAnimation(modelKey) {
             const el = models[modelKey];
-            if (el && el.components['animation-mixer']) {
+            if (el.components['animation-mixer']) {
                 const mixer = el.components['animation-mixer'].mixer;
                 if (mixer) {
                     mixer.stopAllAction();
@@ -128,17 +128,11 @@
             }
         }
 
-        // CẢI TIẾN: showModel giờ sẽ tự động kích hoạt animation luôn
         function showModel(type) { 
             Object.keys(models).forEach(k => {
                 const isTarget = (k === type);
                 models[k].setAttribute('visible', isTarget);
-                
-                if (isTarget) {
-                    // Nếu là target, ép nó phải play animation để tránh A-pose
-                    playAnimation(k);
-                } else {
-                    // Nếu không phải target, stop để tiết kiệm tài nguyên
+                if (!isTarget && ['atkStart', 'atkMid', 'atkEnd', 'ex', 'cInter', 'stop'].includes(k)) {
                     if (models[k].components['animation-mixer'] && models[k].components['animation-mixer'].mixer) {
                         models[k].components['animation-mixer'].mixer.stopAllAction();
                     }
@@ -166,12 +160,14 @@
             if (currentMode === 'combat') {
                 isActionActive = true; moveData.active = false;
                 actionBtn.classList.add('active-combat'); 
-                showModel('atkStart'); // Đã bao gồm playAnimation bên trong
+                showModel('atkStart');
+                playAnimation('atkStart');
                 setTimeout(() => { if(isActionActive) playSnd(sfxN1, false); }, 50);
             } else {
                 isEXRunning = true; moveData.active = false;
                 actionBtn.classList.add('active-cafe'); 
                 showModel('cInter');
+                playAnimation('cInter');
                 const randInter = document.getElementById(`snd-inter-${Math.floor(Math.random()*3)+1}`);
                 playSnd(randInter);
             }
@@ -183,6 +179,7 @@
                 actionBtn.classList.remove('active-combat');
                 stopSnd(sfxN1); stopSnd(sfxN2); playSnd(sfxN3, false);
                 showModel('atkEnd');
+                playAnimation('atkEnd');
             }
         }
 
@@ -196,19 +193,23 @@
             setTimeout(() => { if(isEXRunning) playSnd(sndEx, true); }, 50); 
             const voices = ['snd-ex-v1','snd-ex-v2','snd-ex-v3','snd-ex-l1','snd-ex-l2','snd-ex-l3'];
             playSnd(document.getElementById(voices[Math.floor(Math.random()*voices.length)]));
+            playAnimation('ex');
         }
 
         models.atkStart.addEventListener('animation-finished', () => { 
             if(isActionActive) { 
                 showModel('atkMid'); 
+                playAnimation('atkMid');
                 lastMidTime = 0; 
                 playSnd(sfxN2, true); 
             } 
         });
 
+        // FIX 2: Lắng nghe sự kiện kết thúc của Stop để về Idle ngay lập tức
         models.stop.addEventListener('animation-finished', () => {
             if (!moveData.active && !isActionActive && !isEXRunning) {
                 showModel('idle');
+                playAnimation('idle');
             }
         });
         
@@ -237,16 +238,15 @@
             if (isActionActive || isEXRunning) return;
             if (stopTimer) { clearTimeout(stopTimer); stopTimer = null; }
             moveData.active = true; moveData.x = data.vector.x; moveData.z = -data.vector.y;
-            // Chỉ gọi showModel khi cần thiết để tránh giật
-            if (models[currentMode === 'combat' ? 'walk' : 'cWalk'].getAttribute('visible') === 'false') {
-                showModel(currentMode === 'combat' ? 'walk' : 'cWalk');
-            }
+            showModel(currentMode === 'combat' ? 'walk' : 'cWalk');
         });
         manager.on('end', () => {
             moveData.active = false;
             if (!isActionActive && !isEXRunning) {
                 if (currentMode === 'combat') {
                     showModel('stop'); 
+                    playAnimation('stop');
+                    // Backup timer rút ngắn xuống 1s để tránh đơ lâu nếu sự kiện animation-finished bị miss
                     stopTimer = setTimeout(() => { if (!moveData.active && models.stop.getAttribute('visible') === 'true') showModel('idle'); stopTimer = null; }, 1000);
                 } else showModel('cIdle');
             }
@@ -256,7 +256,7 @@
             if (moveData.active && !isActionActive && !isEXRunning) {
                 const root = document.querySelector('#aris-root'), rot = document.querySelector('#aris-rotation');
                 let currPos = root.getAttribute('position');
-                let speed = currentMode === 'combat' ? 0.05 : 0.01;
+                let speed = currentMode === 'combat' ? 0.05 : 0.015;
                 currPos.x += moveData.x * speed; currPos.z += moveData.z * speed;
                 root.setAttribute('position', currPos);
                 rot.setAttribute('rotation', `0 ${Math.atan2(moveData.x, moveData.z) * 57.3} 0`);
