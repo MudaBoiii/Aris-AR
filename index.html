@@ -121,17 +121,22 @@
 
         function showModel(type) { Object.keys(models).forEach(k => models[k].setAttribute('visible', k === type)); }
         
-        function stopSnd(s) { 
-            if(s) { s.pause(); s.currentTime = 0; s.loop = false; } 
-        }
+        function stopSnd(s) { if(s) { s.pause(); s.currentTime = 0; s.loop = false; } }
         
         function playSnd(s, loop=false) { 
             if(s) { 
-                s.pause(); 
-                s.currentTime = 0; // Luôn bắt đầu từ frame 0 như bạn yêu cầu
-                s.loop = loop; 
+                s.pause(); s.currentTime = 0; s.loop = loop; 
                 s.play().catch(()=>{}); 
             } 
+        }
+
+        // RESET ANIMATION FUNCTION
+        function resetAnimation(modelEntity) {
+            const mixer = modelEntity.components['animation-mixer'] ? modelEntity.components['animation-mixer'].mixer : null;
+            if (mixer) {
+                mixer.stopAllAction();
+                mixer._actions.forEach(action => { action.time = 0; });
+            }
         }
 
         function onAStart(e) {
@@ -143,10 +148,7 @@
                 isActionActive = true; moveData.active = false;
                 actionBtn.classList.add('active-combat'); 
                 showModel('atkStart');
-                
-                // Giai đoạn 1: Phát tiếng súng bắt đầu (không loop)
                 playSnd(sfxN1, false);
-
                 models.atkStart.removeAttribute('animation-mixer');
                 models.atkStart.setAttribute('animation-mixer', {clip: '*', loop: 'once', clampWhenFinished: true});
             } else {
@@ -161,13 +163,11 @@
             if (currentMode === 'combat' && isActionActive) {
                 isActionActive = false;
                 actionBtn.classList.remove('active-combat');
-                
-                // Tắt các tiếng súng đang phát
-                stopSnd(sfxN1);
-                stopSnd(sfxN2);
-                
-                // Giai đoạn 3: Phát tiếng súng kết thúc
+                stopSnd(sfxN1); stopSnd(sfxN2);
                 playSnd(sfxN3, false);
+                
+                // Reset Animation Mid ngay lập tức khi buông tay
+                resetAnimation(models.atkMid);
                 
                 showModel('atkEnd');
                 models.atkEnd.removeAttribute('animation-mixer');
@@ -178,26 +178,32 @@
         function onEXClick(e) {
             if (e.cancelable) e.preventDefault();
             if (isActionActive || isEXRunning) return;
+            
+            // FIX: Xóa timer của Stop Animation ngay lập tức để tránh xung đột
+            if (stopTimer) { clearTimeout(stopTimer); stopTimer = null; }
+
             isEXRunning = true; moveData.active = false;
             exBtn.classList.add('active-ex'); showModel('ex');
+            
             setTimeout(() => { if(isEXRunning) playSnd(sndEx, true); }, 50); 
             const voices = ['snd-ex-v1','snd-ex-v2','snd-ex-v3','snd-ex-l1','snd-ex-l2','snd-ex-l3'];
             playSnd(document.getElementById(voices[Math.floor(Math.random()*voices.length)]));
+            
             models.ex.removeAttribute('animation-mixer');
             models.ex.setAttribute('animation-mixer', {clip: '*', loop: 'once', clampWhenFinished: true});
         }
 
-        // Chuyển giai đoạn từ Start sang Mid
         models.atkStart.addEventListener('animation-finished', () => { 
             if(isActionActive) { 
                 showModel('atkMid'); 
                 lastMidTime = 0; 
-                // Giai đoạn 2: Phát tiếng súng liên thanh (có loop)
                 playSnd(sfxN2, true);
             } 
         });
 
-        models.atkEnd.addEventListener('animation-finished', () => { if(!isActionActive && !moveData.active) showModel('idle'); });
+        models.atkEnd.addEventListener('animation-finished', () => { 
+            if(!isActionActive && !moveData.active) showModel('idle'); 
+        });
         
         models.ex.addEventListener('animation-finished', () => { 
             isEXRunning = false; exBtn.classList.remove('active-ex'); stopSnd(sndEx);
@@ -229,6 +235,7 @@
         const manager = nipplejs.create({zone: document.getElementById('joystick-zone'), mode: 'static', position: {left: '70px', bottom: '70px'}, color: 'cyan'});
         manager.on('move', (evt, data) => {
             if (isActionActive || isEXRunning) return;
+            if (stopTimer) { clearTimeout(stopTimer); stopTimer = null; }
             moveData.active = true; moveData.x = data.vector.x; moveData.z = -data.vector.y;
             showModel(currentMode === 'combat' ? 'walk' : 'cWalk');
         });
@@ -239,7 +246,12 @@
                     showModel('stop'); 
                     models.stop.removeAttribute('animation-mixer');
                     models.stop.setAttribute('animation-mixer', {clip: '*', loop: 'once', clampWhenFinished: true});
-                    stopTimer = setTimeout(() => { if (!moveData.active) showModel('idle'); }, 2000);
+                    stopTimer = setTimeout(() => { 
+                        if (!moveData.active && !isActionActive && !isEXRunning) {
+                            showModel('idle');
+                        }
+                        stopTimer = null;
+                    }, 2000);
                 } else showModel('cIdle');
             }
         });
@@ -253,7 +265,6 @@
                 root.setAttribute('position', currPos);
                 rot.setAttribute('rotation', `0 ${Math.atan2(moveData.x, moveData.z) * 57.3} 0`);
             }
-            // Đồng bộ Mid loop để âm thanh luôn khớp nhịp giật của model
             if (isActionActive && models.atkMid.getAttribute('visible') === 'true') {
                 const mixer = models.atkMid.components['animation-mixer'].mixer;
                 if (mixer && mixer._actions[0]) {
