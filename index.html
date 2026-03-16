@@ -2,7 +2,7 @@
 <html>
 <head>
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Aris AR - Interactive Icons</title>
+    <title>Aris AR - The Hero's Adventure</title>
     <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
     <script src="https://cdn.jsdelivr.net/gh/donmccurdy/aframe-extras@v7.0.0/dist/aframe-extras.min.js"></script>
@@ -64,9 +64,9 @@
             <audio id="snd-cafe-4" src="SFX/Cafe/Alice_Cafe_Act_4.ogg"></audio>
             <audio id="snd-cafe-5" src="SFX/Cafe/Alice_Cafe_Act_5.ogg"></audio>
             
-            <audio id="snd-inter-1" src="SFX/Inter/Inter1.ogg"></audio>
-            <audio id="snd-inter-2" src="SFX/Inter/Inter2.ogg"></audio>
-            <audio id="snd-inter-3" src="SFX/Inter/Inter3.ogg"></audio>
+            <audio id="snd-inter-1" src="SFX/Inter/Inter1.mp3"></audio>
+            <audio id="snd-inter-2" src="SFX/Inter/Inter2.mp3"></audio>
+            <audio id="snd-inter-3" src="SFX/Inter/Inter3.mp3"></audio>
 
             <audio id="snd-ex-v1" src="SFX/Fire/EX/Alice_ExSkill_1.ogg"></audio>
             <audio id="snd-ex-v2" src="SFX/Fire/EX/Alice_ExSkill_2.ogg"></audio>
@@ -258,7 +258,7 @@
             if (moveData.active && !isActionActive && !isEXRunning) {
                 const root = document.querySelector('#aris-root'), rot = document.querySelector('#aris-rotation');
                 let currPos = root.getAttribute('position');
-                let speed = currentMode === 'combat' ? 0.05 : 0.015;
+                let speed = currentMode === 'combat' ? 0.05 : 0.01;
                 currPos.x += moveData.x * speed; currPos.z += moveData.z * speed;
                 root.setAttribute('position', currPos);
                 rot.setAttribute('rotation', `0 ${Math.atan2(moveData.x, moveData.z) * 57.3} 0`);
