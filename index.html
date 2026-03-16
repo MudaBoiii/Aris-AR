@@ -123,7 +123,10 @@
                 if (mixer) {
                     mixer.stopAllAction();
                     const action = mixer.clipAction(mixer._root.animations[0]);
-                    if (action) { action.reset().play(); }
+                    if (action) { 
+                        action.reset().play(); 
+                        mixer.update(0); // Force update tư thế ngay lập tức
+                    }
                 }
             }
         }
@@ -138,6 +141,8 @@
                     }
                 }
             }); 
+            // Khi chuyển về Idle, đảm bảo animation-mixer được reset đúng clip để tránh A-Pose
+            if (type === 'idle' || type === 'cIdle') playAnimation(type);
         }
 
         function stopSnd(s) { if(s) { s.pause(); s.currentTime = 0; s.loop = false; } }
@@ -205,11 +210,10 @@
             } 
         });
 
-        // FIX 2: Lắng nghe sự kiện kết thúc của Stop để về Idle ngay lập tức
+        // KHI HẾT STOP THÌ LÊN LIỀN IDLE
         models.stop.addEventListener('animation-finished', () => {
             if (!moveData.active && !isActionActive && !isEXRunning) {
                 showModel('idle');
-                playAnimation('idle');
             }
         });
         
@@ -246,8 +250,6 @@
                 if (currentMode === 'combat') {
                     showModel('stop'); 
                     playAnimation('stop');
-                    // Backup timer rút ngắn xuống 1s để tránh đơ lâu nếu sự kiện animation-finished bị miss
-                    stopTimer = setTimeout(() => { if (!moveData.active && models.stop.getAttribute('visible') === 'true') showModel('idle'); stopTimer = null; }, 1000);
                 } else showModel('cIdle');
             }
         });
