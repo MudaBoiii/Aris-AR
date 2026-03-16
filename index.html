@@ -88,7 +88,7 @@
                     <a-gltf-model id="arisWalk" src="#mWalk" scale="0.3 0.3 0.3" visible="false" animation-mixer></a-gltf-model>
                     <a-gltf-model id="arisStop" src="#mStop" scale="0.3 0.3 0.3" visible="false" animation-mixer="loop:once; clampWhenFinished:true"></a-gltf-model>
                     <a-gltf-model id="arisAtkStart" src="#aStart" scale="0.3 0.3 0.3" visible="false" animation-mixer="loop:once; clampWhenFinished:true"></a-gltf-model>
-                    <a-gltf-model id="arisAtkMid" src="#aMid" scale="0.3 0.3 0.3" visible="false" animation-mixer="loop:once; clampWhenFinished:true"></a-gltf-model>
+                    <a-gltf-model id="arisAtkMid" src="#aMid" scale="0.3 0.3 0.3" visible="false" animation-mixer="loop:repeat"></a-gltf-model>
                     <a-gltf-model id="arisAtkEnd" src="#aEnd" scale="0.3 0.3 0.3" visible="false" animation-mixer="loop:once; clampWhenFinished:true"></a-gltf-model>
                     <a-gltf-model id="cafeIdle" src="#cIdle" scale="0.3 0.3 0.3" visible="false" animation-mixer></a-gltf-model>
                     <a-gltf-model id="cafeWalk" src="#cWalk" scale="0.3 0.3 0.3" visible="false" animation-mixer></a-gltf-model>
@@ -102,9 +102,9 @@
     <script>
         const FPS = 24;
         let currentMode = 'combat', isActionActive = false, isEXRunning = false, lastMidTime = 0;
-        let isHoldingAction = false; // Biến kiểm soát trạng thái giữ nút
         let cafeVoiceTimeout = null, stopTimer = null;
         let moveData = { x: 0, z: 0, active: false };
+        let isPressing = false; // Biến theo dõi nút đang được giữ
 
         const models = {
             idle: document.querySelector('#arisIdle'), walk: document.querySelector('#arisWalk'),
@@ -124,10 +124,7 @@
                 if (mixer) {
                     mixer.stopAllAction();
                     const action = mixer.clipAction(mixer._root.animations[0]);
-                    if (action) { 
-                        action.reset().play(); 
-                        mixer.update(0);
-                    }
+                    if (action) { action.reset().play(); mixer.update(0); }
                 }
             }
         }
@@ -150,8 +147,8 @@
 
         function onAStart(e) {
             if (e.cancelable) e.preventDefault();
+            isPressing = true; // Bắt đầu giữ nút
             if (isActionActive || isEXRunning) return;
-            isHoldingAction = true; // Bắt đầu giữ
 
             if (currentMode === 'combat') {
                 isActionActive = true; moveData.active = false;
@@ -164,69 +161,59 @@
                 actionBtn.classList.add('active-cafe'); 
                 showModel('cInter');
                 playAnimation('cInter');
-                const randInter = document.getElementById(`snd-inter-${Math.floor(Math.random()*3)+1}`);
-                playSnd(randInter);
+                playSnd(document.getElementById(`snd-inter-${Math.floor(Math.random()*3)+1}`));
             }
         }
 
         function onAEnd() {
-            isHoldingAction = false; // Thả nút
-            // Không set isActionActive = false ở đây để chuỗi animation chạy nốt
+            isPressing = false; // Đã buông nút
+            // Không set isActionActive = false ở đây nữa để animation Mid chạy nốt rồi End xử lý
         }
 
-        // CHUỖI LOGIC CHIẾN ĐẤU: START -> MID -> END
+        // LOGIC CHUỖI TẤN CÔNG NORMAL
         models.atkStart.addEventListener('animation-finished', () => { 
             if(isActionActive) { 
                 showModel('atkMid'); 
                 playAnimation('atkMid');
-                playSnd(sfxN2, false); 
+                lastMidTime = 0; 
+                playSnd(sfxN2, true);
+                
+                // Nếu người dùng buông nút sớm (isPressing = false), chuyển sang End luôn sau 1 vòng Mid
+                // Ở đây ta dùng setTimeout dựa trên thời lượng clip Mid hoặc đơn giản là đợi loop kết thúc
             } 
         });
 
-        models.atkMid.addEventListener('animation-finished', () => {
-            if(isActionActive) {
+        models.atkMid.addEventListener('animation-loop', () => {
+            // Khi Mid xong 1 vòng, kiểm tra xem còn giữ nút không
+            if (!isPressing && isActionActive) {
+                isActionActive = false; // Đánh dấu kết thúc chuỗi bắn
+                actionBtn.classList.remove('active-combat');
+                stopSnd(sfxN1); stopSnd(sfxN2); playSnd(sfxN3, false);
                 showModel('atkEnd');
                 playAnimation('atkEnd');
-                playSnd(sfxN3, false);
             }
         });
 
-        models.atkEnd.addEventListener('animation-finished', () => {
-            if (isHoldingAction && currentMode === 'combat') {
-                // Nếu vẫn đang giữ nút, quay lại Start để tạo vòng lặp Start-Mid-End
-                showModel('atkStart');
-                playAnimation('atkStart');
-                playSnd(sfxN1, false);
-            } else {
-                // Nếu đã thả nút, kết thúc trạng thái action và về Idle
-                isActionActive = false;
-                actionBtn.classList.remove('active-combat');
-                if(!moveData.active) showModel('idle');
+        models.atkEnd.addEventListener('animation-finished', () => { 
+            if (!moveData.active) {
+                // Nếu sau khi End mà vẫn đang giữ nút (isPressing), tự động lặp lại từ Start
+                if (isPressing && currentMode === 'combat' && !isEXRunning) {
+                    isActionActive = true;
+                    actionBtn.classList.add('active-combat');
+                    showModel('atkStart');
+                    playAnimation('atkStart');
+                    setTimeout(() => { if(isActionActive) playSnd(sfxN1, false); }, 50);
+                } else {
+                    showModel('idle');
+                }
             }
         });
 
         // CÁC LOGIC KHÁC GIỮ NGUYÊN
-        models.stop.addEventListener('animation-finished', () => {
-            if (!moveData.active && !isActionActive && !isEXRunning) showModel('idle');
-        });
-        
-        models.ex.addEventListener('animation-finished', () => { 
-            isEXRunning = false; exBtn.classList.remove('active-ex'); 
-            stopSnd(sndEx); showModel(currentMode === 'combat' ? 'idle' : 'cIdle'); 
-        });
+        models.stop.addEventListener('animation-finished', () => { if (!moveData.active && !isActionActive && !isEXRunning) showModel('idle'); });
+        models.ex.addEventListener('animation-finished', () => { isEXRunning = false; exBtn.classList.remove('active-ex'); stopSnd(sndEx); showModel(currentMode === 'combat' ? 'idle' : 'cIdle'); });
+        models.cInter.addEventListener('animation-finished', () => { isEXRunning = false; actionBtn.classList.remove('active-cafe'); showModel('cIdle'); });
 
-        models.cInter.addEventListener('animation-finished', () => { 
-            isEXRunning = false; isHoldingAction = false;
-            actionBtn.classList.remove('active-cafe'); showModel('cIdle'); 
-        });
-
-        // Event Listeners
-        actionBtn.addEventListener('touchstart', onAStart);
-        actionBtn.addEventListener('mousedown', onAStart);
-        window.addEventListener('touchend', onAEnd);
-        window.addEventListener('mouseup', onAEnd);
-
-        // Joystick & Switch
         document.getElementById('switch-btn').addEventListener('click', () => {
             if (isActionActive || isEXRunning) return;
             currentMode = (currentMode === 'combat') ? 'cafe' : 'combat';
@@ -239,6 +226,22 @@
             }
         });
 
+        function onEXClick(e) {
+            if (e.cancelable) e.preventDefault();
+            if (isActionActive || isEXRunning) return;
+            isEXRunning = true; moveData.active = false;
+            exBtn.classList.add('active-ex'); 
+            showModel('ex');
+            setTimeout(() => { if(isEXRunning) playSnd(sndEx, true); }, 50); 
+            const voices = ['snd-ex-v1','snd-ex-v2','snd-ex-v3','snd-ex-l1','snd-ex-l2','snd-ex-l3'];
+            playSnd(document.getElementById(voices[Math.floor(Math.random()*voices.length)]));
+            playAnimation('ex');
+        }
+
+        actionBtn.addEventListener('touchstart', onAStart); actionBtn.addEventListener('mousedown', onAStart);
+        window.addEventListener('touchend', onAEnd); window.addEventListener('mouseup', onAEnd);
+        exBtn.addEventListener('click', onEXClick);
+
         const manager = nipplejs.create({zone: document.getElementById('joystick-zone'), mode: 'static', position: {left: '70px', bottom: '70px'}, color: 'cyan'});
         manager.on('move', (evt, data) => {
             if (isActionActive || isEXRunning) return;
@@ -248,8 +251,7 @@
         manager.on('end', () => {
             moveData.active = false;
             if (!isActionActive && !isEXRunning) {
-                if (currentMode === 'combat') { showModel('stop'); playAnimation('stop'); }
-                else showModel('cIdle');
+                if (currentMode === 'combat') { showModel('stop'); playAnimation('stop'); } else showModel('cIdle');
             }
         });
 
@@ -261,6 +263,14 @@
                 currPos.x += moveData.x * speed; currPos.z += moveData.z * speed;
                 root.setAttribute('position', currPos);
                 rot.setAttribute('rotation', `0 ${Math.atan2(moveData.x, moveData.z) * 57.3} 0`);
+            }
+            if (isActionActive && models.atkMid.getAttribute('visible') === 'true') {
+                const mixer = models.atkMid.components['animation-mixer'].mixer;
+                if (mixer && mixer._actions[0]) {
+                    let cur = mixer._actions[0].time;
+                    if (cur < lastMidTime) { sfxN2.currentTime = 0; }
+                    lastMidTime = cur;
+                }
             }
             requestAnimationFrame(update);
         }
