@@ -32,6 +32,12 @@
             background-size: 80%; background-repeat: no-repeat; background-position: center;
             transition: all 0.1s;
         }
+        /* FPS Counter Style */
+        #fps-counter {
+            position: fixed; top: 10px; left: 10px; color: #00ff00; 
+            font-family: monospace; font-weight: bold; font-size: 14px;
+            background: rgba(0,0,0,0.5); padding: 4px 8px; border-radius: 4px; z-index: 4000;
+        }
         .btn-action:active, #switch-btn:active { filter: brightness(1.5); }
         #action-btn.active-combat { background-color: rgba(78, 160, 238, 0.6); transform: scale(0.9); box-shadow: 0 0 25px #4ea0ee; filter: brightness(1.8); }
         #action-btn.active-cafe { background-color: rgba(255, 165, 0, 0.6); transform: scale(0.9); box-shadow: 0 0 25px #ffa500; filter: brightness(1.5); }
@@ -40,6 +46,7 @@
     </style>
 </head>
 <body>
+    <div id="fps-counter">FPS: --</div>
     <div id="joystick-zone"></div>
     <div id="switch-btn"></div>
     <div id="ex-btn" class="btn-action"></div>
@@ -63,11 +70,9 @@
             <audio id="snd-cafe-3" src="SFX/Cafe/Alice_Cafe_Act_3.ogg"></audio>
             <audio id="snd-cafe-4" src="SFX/Cafe/Alice_Cafe_Act_4.ogg"></audio>
             <audio id="snd-cafe-5" src="SFX/Cafe/Alice_Cafe_Act_5.ogg"></audio>
-            
             <audio id="snd-inter-1" src="SFX/Inter/Inter1.mp3"></audio>
             <audio id="snd-inter-2" src="SFX/Inter/Inter2.mp3"></audio>
             <audio id="snd-inter-3" src="SFX/Inter/Inter3.mp3"></audio>
-
             <audio id="snd-ex-v1" src="SFX/Fire/EX/Alice_ExSkill_1.ogg"></audio>
             <audio id="snd-ex-v2" src="SFX/Fire/EX/Alice_ExSkill_2.ogg"></audio>
             <audio id="snd-ex-v3" src="SFX/Fire/EX/Alice_ExSkill_3.ogg"></audio>
@@ -78,7 +83,6 @@
             <audio id="snd-gun-2" src="SFX/Gun/Normal2.mp3"></audio>
             <audio id="snd-gun-3" src="SFX/Gun/Normal3.mp3"></audio>
             <audio id="snd-gun-ex" src="SFX/Gun/EX.mp3"></audio>
-
             <audio id="snd-combat-w" src="SFX/Other/CombatW.mp3"></audio>
             <audio id="snd-combat-s" src="SFX/Other/CombatS.mp3"></audio>
             <audio id="snd-cafe-w" src="SFX/Other/CafeW.mp3"></audio>
@@ -105,7 +109,11 @@
     </a-scene>
 
     <script>
-        const FPS = 24;
+        // FPS Counter Logic
+        const fpsDisplay = document.getElementById('fps-counter');
+        let lastTime = performance.now();
+        let frames = 0;
+
         let currentMode = 'combat', isActionActive = false, isEXRunning = false;
         let cafeVoiceTimeout = null, stopTimer = null;
         let moveData = { x: 0, z: 0, active: false };
@@ -121,8 +129,6 @@
 
         const actionBtn = document.getElementById('action-btn'), exBtn = document.getElementById('ex-btn');
         const sfxN1 = document.getElementById('snd-gun-1'), sfxN2 = document.getElementById('snd-gun-2'), sfxN3 = document.getElementById('snd-gun-3'), sndEx = document.getElementById('snd-gun-ex');
-        
-        // MỚI: Truy cập SFX Other
         const sfxCW = document.getElementById('snd-combat-w'), sfxCS = document.getElementById('snd-combat-s'), sfxCafW = document.getElementById('snd-cafe-w'), sfxGDDS = document.getElementById('snd-gdd-s');
 
         function playAnimation(modelKey) {
@@ -165,11 +171,7 @@
         function onAStart(e) {
             if (e.cancelable) e.preventDefault();
             if (isActionActive || isEXRunning) return;
-            if (stopTimer) { clearTimeout(stopTimer); stopTimer = null; }
-            
-            // Khi bắn, dừng tiếng bước chân
             stopSnd(sfxCW); stopSnd(sfxCafW);
-
             if (currentMode === 'combat') {
                 shouldContinueShooting = true;
                 isActionActive = true; moveData.active = false;
@@ -192,9 +194,7 @@
         }
 
         function onAEnd() {
-            if (currentMode === 'combat') {
-                shouldContinueShooting = false;
-            }
+            if (currentMode === 'combat') shouldContinueShooting = false;
         }
 
         function onEXClick(e) {
@@ -231,9 +231,7 @@
         });
 
         models.stop.addEventListener('animation-finished', () => {
-            if (!moveData.active && !isActionActive && !isEXRunning) {
-                showModel('idle');
-            }
+            if (!moveData.active && !isActionActive && !isEXRunning) showModel('idle');
         });
         
         models.ex.addEventListener('animation-finished', () => { isEXRunning = false; exBtn.classList.remove('active-ex'); stopSnd(sndEx); showModel(currentMode === 'combat' ? 'idle' : 'cIdle'); });
@@ -241,10 +239,7 @@
 
         document.getElementById('switch-btn').addEventListener('click', () => {
             if (isActionActive || isEXRunning) return;
-            
-            // MỚI: SFX khi nhấn nút switch
             playSnd(sfxGDDS);
-
             currentMode = (currentMode === 'combat') ? 'cafe' : 'combat';
             if (currentMode === 'combat') {
                 actionBtn.classList.replace('mode-cafe-icon', 'mode-combat-icon');
@@ -262,34 +257,33 @@
         const manager = nipplejs.create({zone: document.getElementById('joystick-zone'), mode: 'static', position: {left: '70px', bottom: '70px'}, color: 'cyan'});
         manager.on('move', (evt, data) => {
             if (isActionActive || isEXRunning) return;
-            if (stopTimer) { clearTimeout(stopTimer); stopTimer = null; }
-            
-            // MỚI: Bật SFX bước chân khi bắt đầu di chuyển nếu chưa chạy
             if (!moveData.active) {
                 if (currentMode === 'combat') playSnd(sfxCW, true);
                 else playSnd(sfxCafW, true);
             }
-
             moveData.active = true; moveData.x = data.vector.x; moveData.z = -data.vector.y;
             showModel(currentMode === 'combat' ? 'walk' : 'cWalk');
         });
         manager.on('end', () => {
             moveData.active = false;
-            
-            // MỚI: Dừng SFX bước chân khi buông joystick
             stopSnd(sfxCW); stopSnd(sfxCafW);
-
             if (!isActionActive && !isEXRunning) {
                 if (currentMode === 'combat') {
-                    showModel('stop'); 
-                    playAnimation('stop');
-                    // MỚI: Chạy SFX Stop
-                    playSnd(sfxCS);
+                    showModel('stop'); playAnimation('stop'); playSnd(sfxCS);
                 } else showModel('cIdle');
             }
         });
 
         function update() {
+            // FPS Calculation
+            frames++;
+            const time = performance.now();
+            if (time >= lastTime + 1000) {
+                fpsDisplay.innerText = `FPS: ${Math.round((frames * 1000) / (time - lastTime))}`;
+                frames = 0;
+                lastTime = time;
+            }
+
             if (moveData.active && !isActionActive && !isEXRunning) {
                 const root = document.querySelector('#aris-root'), rot = document.querySelector('#aris-rotation');
                 let currPos = root.getAttribute('position');
