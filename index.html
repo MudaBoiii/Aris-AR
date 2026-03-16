@@ -118,12 +118,15 @@
 
         function playAnimation(modelKey) {
             const el = models[modelKey];
-            if (el.components['animation-mixer']) {
+            if (el && el.components['animation-mixer']) {
                 const mixer = el.components['animation-mixer'].mixer;
                 if (mixer) {
                     mixer.stopAllAction();
-                    const action = mixer.clipAction(mixer._root.animations[0]);
-                    if (action) { action.reset().play(); }
+                    const animations = el.getObject3D('mesh').animations || mixer._root.animations;
+                    if (animations && animations.length > 0) {
+                        const action = mixer.clipAction(animations[0]);
+                        action.reset().play();
+                    }
                 }
             }
         }
@@ -205,31 +208,54 @@
             } 
         });
 
+        // SỬA TẠI ĐÂY: Thêm playAnimation để kích hoạt Idle ngay khi Stop kết thúc
         models.stop.addEventListener('animation-finished', () => {
             if (!moveData.active && !isActionActive && !isEXRunning) {
-                showModel('idle');
-                playAnimation('idle'); // Cưỡng chế chạy Idle khi Stop xong
+                const targetIdle = (currentMode === 'combat' ? 'idle' : 'cIdle');
+                showModel(targetIdle);
+                playAnimation(targetIdle); // Cưỡng ép chạy animation để không bị A-pose
             }
         });
         
-        models.atkEnd.addEventListener('animation-finished', () => { if(!isActionActive && !moveData.active) showModel(currentMode === 'combat' ? 'idle' : 'cIdle'); });
-        models.ex.addEventListener('animation-finished', () => { isEXRunning = false; exBtn.classList.remove('active-ex'); stopSnd(sndEx); showModel(currentMode === 'combat' ? 'idle' : 'cIdle'); });
-        models.cInter.addEventListener('animation-finished', () => { isEXRunning = false; actionBtn.classList.remove('active-cafe'); showModel('cIdle'); });
+        models.atkEnd.addEventListener('animation-finished', () => { 
+            if(!isActionActive && !moveData.active) {
+                const targetIdle = (currentMode === 'combat' ? 'idle' : 'cIdle');
+                showModel(targetIdle);
+                playAnimation(targetIdle);
+            }
+        });
+
+        models.ex.addEventListener('animation-finished', () => { 
+            isEXRunning = false; 
+            exBtn.classList.remove('active-ex'); 
+            stopSnd(sndEx); 
+            const targetIdle = (currentMode === 'combat' ? 'idle' : 'cIdle');
+            showModel(targetIdle);
+            playAnimation(targetIdle);
+        });
+
+        models.cInter.addEventListener('animation-finished', () => { 
+            isEXRunning = false; 
+            actionBtn.classList.remove('active-cafe'); 
+            showModel('cIdle');
+            playAnimation('cIdle');
+        });
 
         document.getElementById('switch-btn').addEventListener('click', () => {
             if (isActionActive || isEXRunning) return;
             currentMode = (currentMode === 'combat') ? 'cafe' : 'combat';
+            const targetIdle = (currentMode === 'combat' ? 'idle' : 'cIdle');
             if (currentMode === 'combat') {
                 actionBtn.classList.replace('mode-cafe-icon', 'mode-combat-icon');
-                exBtn.style.display = 'flex'; showModel('idle'); 
-                playAnimation('idle'); // Cưỡng chế khi chuyển mode
+                exBtn.style.display = 'flex'; 
                 clearTimeout(cafeVoiceTimeout);
             } else {
                 actionBtn.classList.replace('mode-combat-icon', 'mode-cafe-icon');
-                exBtn.style.display = 'none'; showModel('cIdle'); 
-                playAnimation('cIdle'); // Cưỡng chế khi chuyển mode
+                exBtn.style.display = 'none'; 
                 autoCafeVoice();
             }
+            showModel(targetIdle);
+            playAnimation(targetIdle);
         });
 
         actionBtn.addEventListener('touchstart', onAStart); actionBtn.addEventListener('mousedown', onAStart);
@@ -240,15 +266,12 @@
         manager.on('move', (evt, data) => {
             if (isActionActive || isEXRunning) return;
             if (stopTimer) { clearTimeout(stopTimer); stopTimer = null; }
-            
-            const targetWalk = currentMode === 'combat' ? 'walk' : 'cWalk';
-            // CHỈ SỬA Ở ĐÂY: Nếu model walk chưa hiện thì mới gọi playAnimation để tránh lag
+            moveData.active = true; moveData.x = data.vector.x; moveData.z = -data.vector.y;
+            const targetWalk = (currentMode === 'combat' ? 'walk' : 'cWalk');
             if (models[targetWalk].getAttribute('visible') === 'false') {
                 showModel(targetWalk);
-                playAnimation(targetWalk); 
+                playAnimation(targetWalk);
             }
-            
-            moveData.active = true; moveData.x = data.vector.x; moveData.z = -data.vector.y;
         });
         manager.on('end', () => {
             moveData.active = false;
@@ -256,7 +279,13 @@
                 if (currentMode === 'combat') {
                     showModel('stop'); 
                     playAnimation('stop');
-                    stopTimer = setTimeout(() => { if (!moveData.active && models.stop.getAttribute('visible') === 'true') { showModel('idle'); playAnimation('idle'); } stopTimer = null; }, 1000);
+                    stopTimer = setTimeout(() => { 
+                        if (!moveData.active && models.stop.getAttribute('visible') === 'true') {
+                            showModel('idle');
+                            playAnimation('idle');
+                        }
+                        stopTimer = null; 
+                    }, 1000);
                 } else {
                     showModel('cIdle');
                     playAnimation('cIdle');
