@@ -297,7 +297,7 @@
             if (moveData.active && !isActionActive && !isEXRunning) {
                 const root = document.querySelector('#aris-root'), rot = document.querySelector('#aris-rotation');
                 let currPos = root.getAttribute('position');
-                let speed = currentMode === 'combat' ? 0.05 : 0.01;
+                let speed = currentMode === 'combat' ? 0.05 : 0.015;
                 currPos.x += moveData.x * speed; currPos.z += moveData.z * speed;
                 root.setAttribute('position', currPos);
                 rot.setAttribute('rotation', `0 ${Math.atan2(moveData.x, moveData.z) * 57.3} 0`);
