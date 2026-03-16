@@ -2,7 +2,7 @@
 <html>
 <head>
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Aris AR - Fix 3 </title>
+    <title>Aris AR - InteractiveIcons</title>
     <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
     <script src="https://cdn.jsdelivr.net/gh/donmccurdy/aframe-extras@v7.0.0/dist/aframe-extras.min.js"></script>
@@ -86,7 +86,7 @@
                 <a-entity id="aris-rotation">
                     <a-gltf-model id="arisIdle" src="#mIdle" scale="0.3 0.3 0.3" visible="true" animation-mixer></a-gltf-model>
                     <a-gltf-model id="arisWalk" src="#mWalk" scale="0.3 0.3 0.3" visible="false" animation-mixer></a-gltf-model>
-                    <a-gltf-model id="arisStop" src="#mStop" scale="0.3 0.3 0.3" visible="false" animation-mixer></a-gltf-model>
+                    <a-gltf-model id="arisStop" src="#mStop" scale="0.3 0.3 0.3" visible="false" animation-mixer="loop:once; clampWhenFinished:true"></a-gltf-model>
                     <a-gltf-model id="arisAtkStart" src="#aStart" scale="0.3 0.3 0.3" visible="false" animation-mixer="loop:once; clampWhenFinished:true"></a-gltf-model>
                     <a-gltf-model id="arisAtkMid" src="#aMid" scale="0.3 0.3 0.3" visible="false" animation-mixer="loop:repeat"></a-gltf-model>
                     <a-gltf-model id="arisAtkEnd" src="#aEnd" scale="0.3 0.3 0.3" visible="false" animation-mixer="loop:once; clampWhenFinished:true"></a-gltf-model>
@@ -116,27 +116,19 @@
         const actionBtn = document.getElementById('action-btn'), exBtn = document.getElementById('ex-btn');
         const sfxN1 = document.getElementById('snd-gun-1'), sfxN2 = document.getElementById('snd-gun-2'), sfxN3 = document.getElementById('snd-gun-3'), sndEx = document.getElementById('snd-gun-ex');
 
-        // [ĐÃ SỬA]: Thêm lệnh ép cập nhật khung xương (mixer.update(0))
         function playAnimation(modelKey) {
             const el = models[modelKey];
-            if (el && el.components['animation-mixer']) {
+            if (el.components['animation-mixer']) {
                 const mixer = el.components['animation-mixer'].mixer;
                 if (mixer) {
                     mixer.stopAllAction();
                     const action = mixer.clipAction(mixer._root.animations[0]);
-                    if (action) { 
-                        action.reset().play(); 
-                        // CHÌA KHÓA FIX A-POSE: Nắn xương ngay lập tức thay vì chờ frame tiếp theo
-                        mixer.update(0);
-                    }
+                    if (action) { action.reset().play(); }
                 }
             }
         }
 
-        // [ĐÃ SỬA]: Tự động gọi playAnimation trước khi bật visible
         function showModel(type) { 
-            playAnimation(type); // Khởi động animation trước
-
             Object.keys(models).forEach(k => {
                 const isTarget = (k === type);
                 models[k].setAttribute('visible', isTarget);
@@ -168,13 +160,14 @@
             if (currentMode === 'combat') {
                 isActionActive = true; moveData.active = false;
                 actionBtn.classList.add('active-combat'); 
-                showModel('atkStart'); // Hàm showModel giờ đã bao gồm playAnimation
+                showModel('atkStart');
+                playAnimation('atkStart');
                 setTimeout(() => { if(isActionActive) playSnd(sfxN1, false); }, 50);
             } else {
                 isEXRunning = true; moveData.active = false;
                 actionBtn.classList.add('active-cafe'); 
                 showModel('cInter');
-                
+                playAnimation('cInter');
                 const randInter = document.getElementById(`snd-inter-${Math.floor(Math.random()*3)+1}`);
                 playSnd(randInter);
             }
@@ -186,6 +179,7 @@
                 actionBtn.classList.remove('active-combat');
                 stopSnd(sfxN1); stopSnd(sfxN2); playSnd(sfxN3, false);
                 showModel('atkEnd');
+                playAnimation('atkEnd');
             }
         }
 
@@ -199,14 +193,24 @@
             setTimeout(() => { if(isEXRunning) playSnd(sndEx, true); }, 50); 
             const voices = ['snd-ex-v1','snd-ex-v2','snd-ex-v3','snd-ex-l1','snd-ex-l2','snd-ex-l3'];
             playSnd(document.getElementById(voices[Math.floor(Math.random()*voices.length)]));
+            playAnimation('ex');
         }
 
         models.atkStart.addEventListener('animation-finished', () => { 
             if(isActionActive) { 
                 showModel('atkMid'); 
+                playAnimation('atkMid');
                 lastMidTime = 0; 
                 playSnd(sfxN2, true); 
             } 
+        });
+
+        // FIX 2: Lắng nghe sự kiện kết thúc của Stop để về Idle ngay lập tức
+        models.stop.addEventListener('animation-finished', () => {
+            if (!moveData.active && !isActionActive && !isEXRunning) {
+                showModel('idle');
+                playAnimation('idle');
+            }
         });
         
         models.atkEnd.addEventListener('animation-finished', () => { if(!isActionActive && !moveData.active) showModel(currentMode === 'combat' ? 'idle' : 'cIdle'); });
@@ -241,7 +245,9 @@
             if (!isActionActive && !isEXRunning) {
                 if (currentMode === 'combat') {
                     showModel('stop'); 
-                    stopTimer = setTimeout(() => { if (!moveData.active && !isActionActive && !isEXRunning) showModel('idle'); stopTimer = null; }, 2000);
+                    playAnimation('stop');
+                    // Backup timer rút ngắn xuống 1s để tránh đơ lâu nếu sự kiện animation-finished bị miss
+                    stopTimer = setTimeout(() => { if (!moveData.active && models.stop.getAttribute('visible') === 'true') showModel('idle'); stopTimer = null; }, 1000);
                 } else showModel('cIdle');
             }
         });
