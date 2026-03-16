@@ -2,7 +2,7 @@
 <html>
 <head>
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Aris AR - InteractiveIcons</title>
+    <title>Aris AR - Interactive Icons</title>
     <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
     <script src="https://cdn.jsdelivr.net/gh/donmccurdy/aframe-extras@v7.0.0/dist/aframe-extras.min.js"></script>
@@ -63,6 +63,11 @@
             <audio id="snd-cafe-3" src="SFX/Cafe/Alice_Cafe_Act_3.ogg"></audio>
             <audio id="snd-cafe-4" src="SFX/Cafe/Alice_Cafe_Act_4.ogg"></audio>
             <audio id="snd-cafe-5" src="SFX/Cafe/Alice_Cafe_Act_5.ogg"></audio>
+            
+            <audio id="snd-inter-1" src="SFX/Inter/Inter1.mp3"></audio>
+            <audio id="snd-inter-2" src="SFX/Inter/Inter2.mp3"></audio>
+            <audio id="snd-inter-3" src="SFX/Inter/Inter3.mp3"></audio>
+
             <audio id="snd-ex-v1" src="SFX/Fire/EX/Alice_ExSkill_1.ogg"></audio>
             <audio id="snd-ex-v2" src="SFX/Fire/EX/Alice_ExSkill_2.ogg"></audio>
             <audio id="snd-ex-v3" src="SFX/Fire/EX/Alice_ExSkill_3.ogg"></audio>
@@ -111,7 +116,6 @@
         const actionBtn = document.getElementById('action-btn'), exBtn = document.getElementById('ex-btn');
         const sfxN1 = document.getElementById('snd-gun-1'), sfxN2 = document.getElementById('snd-gun-2'), sfxN3 = document.getElementById('snd-gun-3'), sndEx = document.getElementById('snd-gun-ex');
 
-        // Hàm hỗ trợ reset animation mượt mà
         function playAnimation(modelKey) {
             const el = models[modelKey];
             if (el.components['animation-mixer']) {
@@ -119,9 +123,7 @@
                 if (mixer) {
                     mixer.stopAllAction();
                     const action = mixer.clipAction(mixer._root.animations[0]);
-                    if (action) {
-                        action.reset().play();
-                    }
+                    if (action) { action.reset().play(); }
                 }
             }
         }
@@ -130,7 +132,6 @@
             Object.keys(models).forEach(k => {
                 const isTarget = (k === type);
                 models[k].setAttribute('visible', isTarget);
-                // Chỉ stop mixer của các model hành động khi chúng bị ẩn
                 if (!isTarget && ['atkStart', 'atkMid', 'atkEnd', 'ex', 'cInter', 'stop'].includes(k)) {
                     if (models[k].components['animation-mixer'] && models[k].components['animation-mixer'].mixer) {
                         models[k].components['animation-mixer'].mixer.stopAllAction();
@@ -167,6 +168,10 @@
                 actionBtn.classList.add('active-cafe'); 
                 showModel('cInter');
                 playAnimation('cInter');
+                
+                // NÂNG CẤP: Phát SFX ngẫu nhiên Inter1-3 khi nhấn nút ở Cafe mode
+                const randInter = document.getElementById(`snd-inter-${Math.floor(Math.random()*3)+1}`);
+                playSnd(randInter);
             }
         }
 
@@ -193,7 +198,6 @@
             playAnimation('ex');
         }
 
-        // Fix A-pose bằng cách kích hoạt Mid ngay lập tức khi Start xong
         models.atkStart.addEventListener('animation-finished', () => { 
             if(isActionActive) { 
                 showModel('atkMid'); 
