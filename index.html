@@ -34,7 +34,7 @@
         }
         .btn-action:active, #switch-btn:active { filter: brightness(1.5); }
         #action-btn.active-combat { background-color: rgba(78, 160, 238, 0.6); transform: scale(0.9); box-shadow: 0 0 25px #4ea0ee; filter: brightness(1.8); }
-        #action-btn.active-cafe { background-color: rgba(255, 165, orange, 0.6); transform: scale(0.9); box-shadow: 0 0 25px #ffa500; filter: brightness(1.5); }
+        #action-btn.active-cafe { background-color: rgba(255, 165, 0, 0.6); transform: scale(0.9); box-shadow: 0 0 25px #ffa500; filter: brightness(1.5); }
         #ex-btn.active-ex { background-color: rgba(160, 32, 240, 0.6); transform: scale(0.9); box-shadow: 0 0 30px #a020f0; filter: brightness(1.5); }
         #switch-btn:active { transform: scale(0.95); background-color: rgba(255, 255, 255, 0.3); }
     </style>
@@ -63,9 +63,11 @@
             <audio id="snd-cafe-3" src="SFX/Cafe/Alice_Cafe_Act_3.ogg"></audio>
             <audio id="snd-cafe-4" src="SFX/Cafe/Alice_Cafe_Act_4.ogg"></audio>
             <audio id="snd-cafe-5" src="SFX/Cafe/Alice_Cafe_Act_5.ogg"></audio>
+            
             <audio id="snd-inter-1" src="SFX/Inter/Inter1.mp3"></audio>
             <audio id="snd-inter-2" src="SFX/Inter/Inter2.mp3"></audio>
             <audio id="snd-inter-3" src="SFX/Inter/Inter3.mp3"></audio>
+
             <audio id="snd-ex-v1" src="SFX/Fire/EX/Alice_ExSkill_1.ogg"></audio>
             <audio id="snd-ex-v2" src="SFX/Fire/EX/Alice_ExSkill_2.ogg"></audio>
             <audio id="snd-ex-v3" src="SFX/Fire/EX/Alice_ExSkill_3.ogg"></audio>
@@ -84,7 +86,7 @@
                 <a-entity id="aris-rotation">
                     <a-gltf-model id="arisIdle" src="#mIdle" scale="0.3 0.3 0.3" visible="true" animation-mixer></a-gltf-model>
                     <a-gltf-model id="arisWalk" src="#mWalk" scale="0.3 0.3 0.3" visible="false" animation-mixer></a-gltf-model>
-                    <a-gltf-model id="arisStop" src="#mStop" scale="0.3 0.3 0.3" visible="false" animation-mixer="loop:once; clampWhenFinished:true"></a-gltf-model>
+                    <a-gltf-model id="arisStop" src="#mStop" scale="0.3 0.3 0.3" visible="false" animation-mixer></a-gltf-model>
                     <a-gltf-model id="arisAtkStart" src="#aStart" scale="0.3 0.3 0.3" visible="false" animation-mixer="loop:once; clampWhenFinished:true"></a-gltf-model>
                     <a-gltf-model id="arisAtkMid" src="#aMid" scale="0.3 0.3 0.3" visible="false" animation-mixer="loop:repeat"></a-gltf-model>
                     <a-gltf-model id="arisAtkEnd" src="#aEnd" scale="0.3 0.3 0.3" visible="false" animation-mixer="loop:once; clampWhenFinished:true"></a-gltf-model>
@@ -116,7 +118,7 @@
 
         function playAnimation(modelKey) {
             const el = models[modelKey];
-            if (el && el.components['animation-mixer']) {
+            if (el.components['animation-mixer']) {
                 const mixer = el.components['animation-mixer'].mixer;
                 if (mixer) {
                     mixer.stopAllAction();
@@ -127,8 +129,6 @@
         }
 
         function showModel(type) { 
-            // Fix A-pose: Kích hoạt animation của model sắp hiện trước
-            playAnimation(type);
             Object.keys(models).forEach(k => {
                 const isTarget = (k === type);
                 models[k].setAttribute('visible', isTarget);
@@ -161,11 +161,15 @@
                 isActionActive = true; moveData.active = false;
                 actionBtn.classList.add('active-combat'); 
                 showModel('atkStart');
+                playAnimation('atkStart');
                 setTimeout(() => { if(isActionActive) playSnd(sfxN1, false); }, 50);
             } else {
                 isEXRunning = true; moveData.active = false;
                 actionBtn.classList.add('active-cafe'); 
                 showModel('cInter');
+                playAnimation('cInter');
+                
+                // NÂNG CẤP: Phát SFX ngẫu nhiên Inter1-3 khi nhấn nút ở Cafe mode
                 const randInter = document.getElementById(`snd-inter-${Math.floor(Math.random()*3)+1}`);
                 playSnd(randInter);
             }
@@ -177,6 +181,7 @@
                 actionBtn.classList.remove('active-combat');
                 stopSnd(sfxN1); stopSnd(sfxN2); playSnd(sfxN3, false);
                 showModel('atkEnd');
+                playAnimation('atkEnd');
             }
         }
 
@@ -190,22 +195,16 @@
             setTimeout(() => { if(isEXRunning) playSnd(sndEx, true); }, 50); 
             const voices = ['snd-ex-v1','snd-ex-v2','snd-ex-v3','snd-ex-l1','snd-ex-l2','snd-ex-l3'];
             playSnd(document.getElementById(voices[Math.floor(Math.random()*voices.length)]));
+            playAnimation('ex');
         }
 
-        // --- XỬ LÝ SỰ KIỆN KẾT THÚC ANIMATION ---
         models.atkStart.addEventListener('animation-finished', () => { 
             if(isActionActive) { 
                 showModel('atkMid'); 
+                playAnimation('atkMid');
                 lastMidTime = 0; 
                 playSnd(sfxN2, true); 
             } 
-        });
-
-        // Fix A-pose khi Stop kết thúc: Chuyển về Idle ngay lập tức
-        models.stop.addEventListener('animation-finished', () => {
-            if (!moveData.active && !isActionActive && !isEXRunning) {
-                showModel('idle');
-            }
         });
         
         models.atkEnd.addEventListener('animation-finished', () => { if(!isActionActive && !moveData.active) showModel(currentMode === 'combat' ? 'idle' : 'cIdle'); });
@@ -240,8 +239,8 @@
             if (!isActionActive && !isEXRunning) {
                 if (currentMode === 'combat') {
                     showModel('stop'); 
-                    // Dự phòng nếu animation-finished không bắt được trên một số thiết bị
-                    stopTimer = setTimeout(() => { if (!moveData.active && !isActionActive && !isEXRunning) showModel('idle'); stopTimer = null; }, 1500);
+                    playAnimation('stop');
+                    stopTimer = setTimeout(() => { if (!moveData.active && !isActionActive && !isEXRunning) showModel('idle'); stopTimer = null; }, 2000);
                 } else showModel('cIdle');
             }
         });
