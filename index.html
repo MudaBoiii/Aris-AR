@@ -10,6 +10,15 @@
     <style>
         body { margin: 0; overflow: hidden; touch-action: none; background: #000; }
         #joystick-zone { position: fixed; bottom: 30px; left: 30px; width: 120px; height: 120px; z-index: 3000; }
+        
+        /* FPS Counter Style */
+        #fps-counter { 
+            position: fixed; top: 10px; left: 10px; color: #00ff00; 
+            font-family: monospace; font-size: 14px; z-index: 4000; 
+            background: rgba(0,0,0,0.5); padding: 4px 8px; border-radius: 4px;
+            pointer-events: none;
+        }
+
         .btn-action {
             position: fixed; width: 75px; height: 75px; 
             background: rgba(255, 255, 255, 0.2); 
@@ -32,12 +41,6 @@
             background-size: 80%; background-repeat: no-repeat; background-position: center;
             transition: all 0.1s;
         }
-        /* FPS Counter Style */
-        #fps-counter {
-            position: fixed; top: 10px; left: 10px; color: #00ff00; 
-            font-family: monospace; font-weight: bold; font-size: 14px;
-            background: rgba(0,0,0,0.5); padding: 4px 8px; border-radius: 4px; z-index: 4000;
-        }
         .btn-action:active, #switch-btn:active { filter: brightness(1.5); }
         #action-btn.active-combat { background-color: rgba(78, 160, 238, 0.6); transform: scale(0.9); box-shadow: 0 0 25px #4ea0ee; filter: brightness(1.8); }
         #action-btn.active-cafe { background-color: rgba(255, 165, 0, 0.6); transform: scale(0.9); box-shadow: 0 0 25px #ffa500; filter: brightness(1.5); }
@@ -46,7 +49,7 @@
     </style>
 </head>
 <body>
-    <div id="fps-counter">FPS: --</div>
+    <div id="fps-counter">FPS: 0</div>
     <div id="joystick-zone"></div>
     <div id="switch-btn"></div>
     <div id="ex-btn" class="btn-action"></div>
@@ -70,9 +73,11 @@
             <audio id="snd-cafe-3" src="SFX/Cafe/Alice_Cafe_Act_3.ogg"></audio>
             <audio id="snd-cafe-4" src="SFX/Cafe/Alice_Cafe_Act_4.ogg"></audio>
             <audio id="snd-cafe-5" src="SFX/Cafe/Alice_Cafe_Act_5.ogg"></audio>
+            
             <audio id="snd-inter-1" src="SFX/Inter/Inter1.mp3"></audio>
             <audio id="snd-inter-2" src="SFX/Inter/Inter2.mp3"></audio>
             <audio id="snd-inter-3" src="SFX/Inter/Inter3.mp3"></audio>
+
             <audio id="snd-ex-v1" src="SFX/Fire/EX/Alice_ExSkill_1.ogg"></audio>
             <audio id="snd-ex-v2" src="SFX/Fire/EX/Alice_ExSkill_2.ogg"></audio>
             <audio id="snd-ex-v3" src="SFX/Fire/EX/Alice_ExSkill_3.ogg"></audio>
@@ -83,6 +88,7 @@
             <audio id="snd-gun-2" src="SFX/Gun/Normal2.mp3"></audio>
             <audio id="snd-gun-3" src="SFX/Gun/Normal3.mp3"></audio>
             <audio id="snd-gun-ex" src="SFX/Gun/EX.mp3"></audio>
+
             <audio id="snd-combat-w" src="SFX/Other/CombatW.mp3"></audio>
             <audio id="snd-combat-s" src="SFX/Other/CombatS.mp3"></audio>
             <audio id="snd-cafe-w" src="SFX/Other/CafeW.mp3"></audio>
@@ -109,10 +115,10 @@
     </a-scene>
 
     <script>
-        // FPS Counter Logic
-        const fpsDisplay = document.getElementById('fps-counter');
+        // FPS logic variables
         let lastTime = performance.now();
-        let frames = 0;
+        let frameCount = 0;
+        const fpsDisplay = document.getElementById('fps-counter');
 
         let currentMode = 'combat', isActionActive = false, isEXRunning = false;
         let cafeVoiceTimeout = null, stopTimer = null;
@@ -171,6 +177,7 @@
         function onAStart(e) {
             if (e.cancelable) e.preventDefault();
             if (isActionActive || isEXRunning) return;
+            if (stopTimer) { clearTimeout(stopTimer); stopTimer = null; }
             stopSnd(sfxCW); stopSnd(sfxCafW);
             if (currentMode === 'combat') {
                 shouldContinueShooting = true;
@@ -194,7 +201,9 @@
         }
 
         function onAEnd() {
-            if (currentMode === 'combat') shouldContinueShooting = false;
+            if (currentMode === 'combat') {
+                shouldContinueShooting = false;
+            }
         }
 
         function onEXClick(e) {
@@ -213,11 +222,9 @@
         models.atkStart.addEventListener('animation-finished', () => { 
             if(isActionActive) { showModel('atkMid'); playAnimation('atkMid'); playSnd(sfxN2, false); } 
         });
-
         models.atkMid.addEventListener('animation-finished', () => {
             if(isActionActive) { showModel('atkEnd'); playAnimation('atkEnd'); playSnd(sfxN3, false); }
         });
-
         models.atkEnd.addEventListener('animation-finished', () => { 
             if (currentMode === 'combat' && isActionActive) {
                 if (shouldContinueShooting) {
@@ -231,7 +238,9 @@
         });
 
         models.stop.addEventListener('animation-finished', () => {
-            if (!moveData.active && !isActionActive && !isEXRunning) showModel('idle');
+            if (!moveData.active && !isActionActive && !isEXRunning) {
+                showModel('idle');
+            }
         });
         
         models.ex.addEventListener('animation-finished', () => { isEXRunning = false; exBtn.classList.remove('active-ex'); stopSnd(sndEx); showModel(currentMode === 'combat' ? 'idle' : 'cIdle'); });
@@ -257,6 +266,7 @@
         const manager = nipplejs.create({zone: document.getElementById('joystick-zone'), mode: 'static', position: {left: '70px', bottom: '70px'}, color: 'cyan'});
         manager.on('move', (evt, data) => {
             if (isActionActive || isEXRunning) return;
+            if (stopTimer) { clearTimeout(stopTimer); stopTimer = null; }
             if (!moveData.active) {
                 if (currentMode === 'combat') playSnd(sfxCW, true);
                 else playSnd(sfxCafW, true);
@@ -276,12 +286,12 @@
 
         function update() {
             // FPS Calculation
-            frames++;
-            const time = performance.now();
-            if (time >= lastTime + 1000) {
-                fpsDisplay.innerText = `FPS: ${Math.round((frames * 1000) / (time - lastTime))}`;
-                frames = 0;
-                lastTime = time;
+            frameCount++;
+            const now = performance.now();
+            if (now >= lastTime + 1000) {
+                fpsDisplay.innerText = `FPS: ${frameCount}`;
+                frameCount = 0;
+                lastTime = now;
             }
 
             if (moveData.active && !isActionActive && !isEXRunning) {
