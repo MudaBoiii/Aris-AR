@@ -2,7 +2,7 @@
 <html>
 <head>
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Aris AR - Interactive Icons</title>
+    <title>Aris AR - InteractiveIcons</title>
     <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
     <script src="https://cdn.jsdelivr.net/gh/donmccurdy/aframe-extras@v7.0.0/dist/aframe-extras.min.js"></script>
@@ -81,14 +81,14 @@
                 <a-entity id="aris-rotation">
                     <a-gltf-model id="arisIdle" src="#mIdle" scale="0.3 0.3 0.3" visible="true" animation-mixer></a-gltf-model>
                     <a-gltf-model id="arisWalk" src="#mWalk" scale="0.3 0.3 0.3" visible="false" animation-mixer></a-gltf-model>
-                    <a-gltf-model id="arisStop" src="#mStop" scale="0.3 0.3 0.3" visible="false"></a-gltf-model>
-                    <a-gltf-model id="arisAtkStart" src="#aStart" scale="0.3 0.3 0.3" visible="false"></a-gltf-model>
-                    <a-gltf-model id="arisAtkMid" src="#aMid" scale="0.3 0.3 0.3" visible="false" animation-mixer></a-gltf-model>
-                    <a-gltf-model id="arisAtkEnd" src="#aEnd" scale="0.3 0.3 0.3" visible="false"></a-gltf-model>
+                    <a-gltf-model id="arisStop" src="#mStop" scale="0.3 0.3 0.3" visible="false" animation-mixer></a-gltf-model>
+                    <a-gltf-model id="arisAtkStart" src="#aStart" scale="0.3 0.3 0.3" visible="false" animation-mixer="loop:once; clampWhenFinished:true"></a-gltf-model>
+                    <a-gltf-model id="arisAtkMid" src="#aMid" scale="0.3 0.3 0.3" visible="false" animation-mixer="loop:repeat"></a-gltf-model>
+                    <a-gltf-model id="arisAtkEnd" src="#aEnd" scale="0.3 0.3 0.3" visible="false" animation-mixer="loop:once; clampWhenFinished:true"></a-gltf-model>
                     <a-gltf-model id="cafeIdle" src="#cIdle" scale="0.3 0.3 0.3" visible="false" animation-mixer></a-gltf-model>
                     <a-gltf-model id="cafeWalk" src="#cWalk" scale="0.3 0.3 0.3" visible="false" animation-mixer></a-gltf-model>
-                    <a-gltf-model id="cafeInter" src="#cInter" scale="0.3 0.3 0.3" visible="false"></a-gltf-model>
-                    <a-gltf-model id="arisEX" src="#exSkill" scale="0.3 0.3 0.3" visible="false"></a-gltf-model>
+                    <a-gltf-model id="cafeInter" src="#cInter" scale="0.3 0.3 0.3" visible="false" animation-mixer="loop:once; clampWhenFinished:true"></a-gltf-model>
+                    <a-gltf-model id="arisEX" src="#exSkill" scale="0.3 0.3 0.3" visible="false" animation-mixer="loop:once; clampWhenFinished:true"></a-gltf-model>
                 </a-entity>
             </a-entity>
         </a-entity>
@@ -111,18 +111,29 @@
         const actionBtn = document.getElementById('action-btn'), exBtn = document.getElementById('ex-btn');
         const sfxN1 = document.getElementById('snd-gun-1'), sfxN2 = document.getElementById('snd-gun-2'), sfxN3 = document.getElementById('snd-gun-3'), sndEx = document.getElementById('snd-gun-ex');
 
-        // CHỈNH SỬA: Hàm hiển thị model chỉ reset mixer của các model hành động (shoot/inter/ex)
+        // Hàm hỗ trợ reset animation mượt mà
+        function playAnimation(modelKey) {
+            const el = models[modelKey];
+            if (el.components['animation-mixer']) {
+                const mixer = el.components['animation-mixer'].mixer;
+                if (mixer) {
+                    mixer.stopAllAction();
+                    const action = mixer.clipAction(mixer._root.animations[0]);
+                    if (action) {
+                        action.reset().play();
+                    }
+                }
+            }
+        }
+
         function showModel(type) { 
             Object.keys(models).forEach(k => {
                 const isTarget = (k === type);
                 models[k].setAttribute('visible', isTarget);
-                
-                // Nếu không phải model đang hiện VÀ là model hành động đặc biệt thì mới dừng mixer
-                // Tránh dừng mixer của idle/walk vì sẽ gây A-pose
+                // Chỉ stop mixer của các model hành động khi chúng bị ẩn
                 if (!isTarget && ['atkStart', 'atkMid', 'atkEnd', 'ex', 'cInter', 'stop'].includes(k)) {
-                    if (models[k].components['animation-mixer']) {
-                        const mixer = models[k].components['animation-mixer'].mixer;
-                        if (mixer) mixer.stopAllAction();
+                    if (models[k].components['animation-mixer'] && models[k].components['animation-mixer'].mixer) {
+                        models[k].components['animation-mixer'].mixer.stopAllAction();
                     }
                 }
             }); 
@@ -149,15 +160,13 @@
                 isActionActive = true; moveData.active = false;
                 actionBtn.classList.add('active-combat'); 
                 showModel('atkStart');
-                models.atkStart.removeAttribute('animation-mixer');
-                models.atkStart.setAttribute('animation-mixer', {clip: '*', loop: 'once', clampWhenFinished: true});
+                playAnimation('atkStart');
                 setTimeout(() => { if(isActionActive) playSnd(sfxN1, false); }, 50);
             } else {
                 isEXRunning = true; moveData.active = false;
                 actionBtn.classList.add('active-cafe'); 
                 showModel('cInter');
-                models.cInter.removeAttribute('animation-mixer');
-                models.cInter.setAttribute('animation-mixer', {clip: '*', loop: 'once', clampWhenFinished: true});
+                playAnimation('cInter');
             }
         }
 
@@ -167,8 +176,7 @@
                 actionBtn.classList.remove('active-combat');
                 stopSnd(sfxN1); stopSnd(sfxN2); playSnd(sfxN3, false);
                 showModel('atkEnd');
-                models.atkEnd.removeAttribute('animation-mixer');
-                models.atkEnd.setAttribute('animation-mixer', {clip: '*', loop: 'once', clampWhenFinished: true});
+                playAnimation('atkEnd');
             }
         }
 
@@ -182,17 +190,16 @@
             setTimeout(() => { if(isEXRunning) playSnd(sndEx, true); }, 50); 
             const voices = ['snd-ex-v1','snd-ex-v2','snd-ex-v3','snd-ex-l1','snd-ex-l2','snd-ex-l3'];
             playSnd(document.getElementById(voices[Math.floor(Math.random()*voices.length)]));
-            models.ex.removeAttribute('animation-mixer');
-            models.ex.setAttribute('animation-mixer', {clip: '*', loop: 'once', clampWhenFinished: true});
+            playAnimation('ex');
         }
 
+        // Fix A-pose bằng cách kích hoạt Mid ngay lập tức khi Start xong
         models.atkStart.addEventListener('animation-finished', () => { 
             if(isActionActive) { 
                 showModel('atkMid'); 
+                playAnimation('atkMid');
                 lastMidTime = 0; 
                 playSnd(sfxN2, true); 
-                models.atkMid.removeAttribute('animation-mixer');
-                models.atkMid.setAttribute('animation-mixer', {clip: '*', loop: 'repeat'});
             } 
         });
         
@@ -228,8 +235,7 @@
             if (!isActionActive && !isEXRunning) {
                 if (currentMode === 'combat') {
                     showModel('stop'); 
-                    models.stop.removeAttribute('animation-mixer');
-                    models.stop.setAttribute('animation-mixer', {clip: '*', loop: 'once', clampWhenFinished: true});
+                    playAnimation('stop');
                     stopTimer = setTimeout(() => { if (!moveData.active && !isActionActive && !isEXRunning) showModel('idle'); stopTimer = null; }, 2000);
                 } else showModel('cIdle');
             }
