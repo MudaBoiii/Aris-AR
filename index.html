@@ -205,11 +205,10 @@
             } 
         });
 
-        // FIX 2: Lắng nghe sự kiện kết thúc của Stop để về Idle ngay lập tức
         models.stop.addEventListener('animation-finished', () => {
             if (!moveData.active && !isActionActive && !isEXRunning) {
                 showModel('idle');
-                playAnimation('idle');
+                playAnimation('idle'); // Cưỡng chế chạy Idle khi Stop xong
             }
         });
         
@@ -222,10 +221,14 @@
             currentMode = (currentMode === 'combat') ? 'cafe' : 'combat';
             if (currentMode === 'combat') {
                 actionBtn.classList.replace('mode-cafe-icon', 'mode-combat-icon');
-                exBtn.style.display = 'flex'; showModel('idle'); clearTimeout(cafeVoiceTimeout);
+                exBtn.style.display = 'flex'; showModel('idle'); 
+                playAnimation('idle'); // Cưỡng chế khi chuyển mode
+                clearTimeout(cafeVoiceTimeout);
             } else {
                 actionBtn.classList.replace('mode-combat-icon', 'mode-cafe-icon');
-                exBtn.style.display = 'none'; showModel('cIdle'); autoCafeVoice();
+                exBtn.style.display = 'none'; showModel('cIdle'); 
+                playAnimation('cIdle'); // Cưỡng chế khi chuyển mode
+                autoCafeVoice();
             }
         });
 
@@ -237,8 +240,15 @@
         manager.on('move', (evt, data) => {
             if (isActionActive || isEXRunning) return;
             if (stopTimer) { clearTimeout(stopTimer); stopTimer = null; }
+            
+            const targetWalk = currentMode === 'combat' ? 'walk' : 'cWalk';
+            // CHỈ SỬA Ở ĐÂY: Nếu model walk chưa hiện thì mới gọi playAnimation để tránh lag
+            if (models[targetWalk].getAttribute('visible') === 'false') {
+                showModel(targetWalk);
+                playAnimation(targetWalk); 
+            }
+            
             moveData.active = true; moveData.x = data.vector.x; moveData.z = -data.vector.y;
-            showModel(currentMode === 'combat' ? 'walk' : 'cWalk');
         });
         manager.on('end', () => {
             moveData.active = false;
@@ -246,9 +256,11 @@
                 if (currentMode === 'combat') {
                     showModel('stop'); 
                     playAnimation('stop');
-                    // Backup timer rút ngắn xuống 1s để tránh đơ lâu nếu sự kiện animation-finished bị miss
-                    stopTimer = setTimeout(() => { if (!moveData.active && models.stop.getAttribute('visible') === 'true') showModel('idle'); stopTimer = null; }, 1000);
-                } else showModel('cIdle');
+                    stopTimer = setTimeout(() => { if (!moveData.active && models.stop.getAttribute('visible') === 'true') { showModel('idle'); playAnimation('idle'); } stopTimer = null; }, 1000);
+                } else {
+                    showModel('cIdle');
+                    playAnimation('cIdle');
+                }
             }
         });
 
