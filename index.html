@@ -2,7 +2,7 @@
 <html>
 <head>
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Aris AR - Interactive Icons</title>
+    <title>Aris AR - Fix 3 </title>
     <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
     <script src="https://cdn.jsdelivr.net/gh/donmccurdy/aframe-extras@v7.0.0/dist/aframe-extras.min.js"></script>
@@ -116,19 +116,27 @@
         const actionBtn = document.getElementById('action-btn'), exBtn = document.getElementById('ex-btn');
         const sfxN1 = document.getElementById('snd-gun-1'), sfxN2 = document.getElementById('snd-gun-2'), sfxN3 = document.getElementById('snd-gun-3'), sndEx = document.getElementById('snd-gun-ex');
 
+        // [ĐÃ SỬA]: Thêm lệnh ép cập nhật khung xương (mixer.update(0))
         function playAnimation(modelKey) {
             const el = models[modelKey];
-            if (el.components['animation-mixer']) {
+            if (el && el.components['animation-mixer']) {
                 const mixer = el.components['animation-mixer'].mixer;
                 if (mixer) {
                     mixer.stopAllAction();
                     const action = mixer.clipAction(mixer._root.animations[0]);
-                    if (action) { action.reset().play(); }
+                    if (action) { 
+                        action.reset().play(); 
+                        // CHÌA KHÓA FIX A-POSE: Nắn xương ngay lập tức thay vì chờ frame tiếp theo
+                        mixer.update(0);
+                    }
                 }
             }
         }
 
+        // [ĐÃ SỬA]: Tự động gọi playAnimation trước khi bật visible
         function showModel(type) { 
+            playAnimation(type); // Khởi động animation trước
+
             Object.keys(models).forEach(k => {
                 const isTarget = (k === type);
                 models[k].setAttribute('visible', isTarget);
@@ -160,16 +168,13 @@
             if (currentMode === 'combat') {
                 isActionActive = true; moveData.active = false;
                 actionBtn.classList.add('active-combat'); 
-                showModel('atkStart');
-                playAnimation('atkStart');
+                showModel('atkStart'); // Hàm showModel giờ đã bao gồm playAnimation
                 setTimeout(() => { if(isActionActive) playSnd(sfxN1, false); }, 50);
             } else {
                 isEXRunning = true; moveData.active = false;
                 actionBtn.classList.add('active-cafe'); 
                 showModel('cInter');
-                playAnimation('cInter');
                 
-                // NÂNG CẤP: Phát SFX ngẫu nhiên Inter1-3 khi nhấn nút ở Cafe mode
                 const randInter = document.getElementById(`snd-inter-${Math.floor(Math.random()*3)+1}`);
                 playSnd(randInter);
             }
@@ -181,7 +186,6 @@
                 actionBtn.classList.remove('active-combat');
                 stopSnd(sfxN1); stopSnd(sfxN2); playSnd(sfxN3, false);
                 showModel('atkEnd');
-                playAnimation('atkEnd');
             }
         }
 
@@ -195,13 +199,11 @@
             setTimeout(() => { if(isEXRunning) playSnd(sndEx, true); }, 50); 
             const voices = ['snd-ex-v1','snd-ex-v2','snd-ex-v3','snd-ex-l1','snd-ex-l2','snd-ex-l3'];
             playSnd(document.getElementById(voices[Math.floor(Math.random()*voices.length)]));
-            playAnimation('ex');
         }
 
         models.atkStart.addEventListener('animation-finished', () => { 
             if(isActionActive) { 
                 showModel('atkMid'); 
-                playAnimation('atkMid');
                 lastMidTime = 0; 
                 playSnd(sfxN2, true); 
             } 
@@ -239,7 +241,6 @@
             if (!isActionActive && !isEXRunning) {
                 if (currentMode === 'combat') {
                     showModel('stop'); 
-                    playAnimation('stop');
                     stopTimer = setTimeout(() => { if (!moveData.active && !isActionActive && !isEXRunning) showModel('idle'); stopTimer = null; }, 2000);
                 } else showModel('cIdle');
             }
@@ -249,7 +250,7 @@
             if (moveData.active && !isActionActive && !isEXRunning) {
                 const root = document.querySelector('#aris-root'), rot = document.querySelector('#aris-rotation');
                 let currPos = root.getAttribute('position');
-                let speed = currentMode === 'combat' ? 0.05 : 0.005;
+                let speed = currentMode === 'combat' ? 0.05 : 0.01;
                 currPos.x += moveData.x * speed; currPos.z += moveData.z * speed;
                 root.setAttribute('position', currPos);
                 rot.setAttribute('rotation', `0 ${Math.atan2(moveData.x, moveData.z) * 57.3} 0`);
