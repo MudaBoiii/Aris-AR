@@ -132,7 +132,8 @@
             if (currentMode === 'combat') {
                 isActionActive = true; moveData.active = false;
                 actionBtn.classList.add('active-combat'); showModel('atkStart');
-                playSnd(sfxN1, false);
+                // GIẢM DELAY XUỐNG 50ms
+                setTimeout(() => { if(isActionActive) playSnd(sfxN1, false); }, 50);
                 models.atkStart.removeAttribute('animation-mixer');
                 models.atkStart.setAttribute('animation-mixer', {clip: '*', loop: 'once', clampWhenFinished: true});
             } else {
@@ -160,6 +161,7 @@
             if (stopTimer) { clearTimeout(stopTimer); stopTimer = null; }
             isEXRunning = true; moveData.active = false;
             exBtn.classList.add('active-ex'); showModel('ex');
+            // GIẢM DELAY XUỐNG 50ms
             setTimeout(() => { if(isEXRunning) playSnd(sndEx, true); }, 50); 
             const voices = ['snd-ex-v1','snd-ex-v2','snd-ex-v3','snd-ex-l1','snd-ex-l2','snd-ex-l3'];
             playSnd(document.getElementById(voices[Math.floor(Math.random()*voices.length)]));
