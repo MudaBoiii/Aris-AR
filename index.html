@@ -111,13 +111,19 @@
         const actionBtn = document.getElementById('action-btn'), exBtn = document.getElementById('ex-btn');
         const sfxN1 = document.getElementById('snd-gun-1'), sfxN2 = document.getElementById('snd-gun-2'), sfxN3 = document.getElementById('snd-gun-3'), sndEx = document.getElementById('snd-gun-ex');
 
+        // CHỈNH SỬA: Hàm hiển thị model chỉ reset mixer của các model hành động (shoot/inter/ex)
         function showModel(type) { 
             Object.keys(models).forEach(k => {
-                models[k].setAttribute('visible', k === type);
-                // Reset mixer khi model bị ẩn để đảm bảo lần sau hiện lên sẽ chạy từ đầu
-                if (k !== type && models[k].components['animation-mixer']) {
-                    const mixer = models[k].components['animation-mixer'].mixer;
-                    if (mixer) mixer.stopAllAction();
+                const isTarget = (k === type);
+                models[k].setAttribute('visible', isTarget);
+                
+                // Nếu không phải model đang hiện VÀ là model hành động đặc biệt thì mới dừng mixer
+                // Tránh dừng mixer của idle/walk vì sẽ gây A-pose
+                if (!isTarget && ['atkStart', 'atkMid', 'atkEnd', 'ex', 'cInter', 'stop'].includes(k)) {
+                    if (models[k].components['animation-mixer']) {
+                        const mixer = models[k].components['animation-mixer'].mixer;
+                        if (mixer) mixer.stopAllAction();
+                    }
                 }
             }); 
         }
@@ -142,12 +148,9 @@
             if (currentMode === 'combat') {
                 isActionActive = true; moveData.active = false;
                 actionBtn.classList.add('active-combat'); 
-                
                 showModel('atkStart');
-                // Force reset animation mixer ngay lập tức
                 models.atkStart.removeAttribute('animation-mixer');
                 models.atkStart.setAttribute('animation-mixer', {clip: '*', loop: 'once', clampWhenFinished: true});
-                
                 setTimeout(() => { if(isActionActive) playSnd(sfxN1, false); }, 50);
             } else {
                 isEXRunning = true; moveData.active = false;
@@ -163,7 +166,6 @@
                 isActionActive = false;
                 actionBtn.classList.remove('active-combat');
                 stopSnd(sfxN1); stopSnd(sfxN2); playSnd(sfxN3, false);
-                
                 showModel('atkEnd');
                 models.atkEnd.removeAttribute('animation-mixer');
                 models.atkEnd.setAttribute('animation-mixer', {clip: '*', loop: 'once', clampWhenFinished: true});
@@ -194,7 +196,7 @@
             } 
         });
         
-        models.atkEnd.addEventListener('animation-finished', () => { if(!isActionActive && !moveData.active) showModel('idle'); });
+        models.atkEnd.addEventListener('animation-finished', () => { if(!isActionActive && !moveData.active) showModel(currentMode === 'combat' ? 'idle' : 'cIdle'); });
         models.ex.addEventListener('animation-finished', () => { isEXRunning = false; exBtn.classList.remove('active-ex'); stopSnd(sndEx); showModel(currentMode === 'combat' ? 'idle' : 'cIdle'); });
         models.cInter.addEventListener('animation-finished', () => { isEXRunning = false; actionBtn.classList.remove('active-cafe'); showModel('cIdle'); });
 
